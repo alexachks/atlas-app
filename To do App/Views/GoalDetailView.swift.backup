@@ -1,0 +1,368 @@
+//
+//  GoalDetailView.swift
+//  To do App
+//
+//  Created by Oleksandr Pushkarov on 12/15/25.
+//
+
+import SwiftUI
+
+struct GoalDetailView: View {
+    let goal: Goal
+    @ObservedObject var viewModel: GoalViewModel
+    @State private var showingAddTopic = false
+    @State private var selectedTopic: Topic?
+    @State private var showingAddTask = false
+    @State private var newTopicTitle = ""
+    @State private var newTopicDescription = ""
+    @State private var newTaskTitle = ""
+    @State private var newTaskDescription = ""
+
+    private var currentGoal: Goal? {
+        viewModel.goals.first(where: { $0.id == goal.id })
+    }
+
+    var body: some View {
+        List {
+            Section {
+                progressSection
+            }
+
+            if let currentGoal = currentGoal {
+                if currentGoal.topics.isEmpty {
+                    Section {
+                        emptyStateView
+                    }
+                } else {
+                    ForEach(currentGoal.topics.sorted(by: { $0.order < $1.order })) { topic in
+                        Section {
+                            if !topic.description.isEmpty {
+                                Text(topic.description)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.vertical, 8)
+                            }
+
+                            if topic.tasks.isEmpty == false {
+                                HStack(spacing: 12) {
+                                    VStack(spacing: 4) {
+                                        Text("\(topic.completedTasksCount)")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.green)
+                                        Text("выполнено")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color.green.opacity(0.1))
+                                    .cornerRadius(8)
+
+                                    VStack(spacing: 4) {
+                                        Text("\(topic.totalTasksCount - topic.completedTasksCount)")
+                                            .font(.title3)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.orange)
+                                        Text("осталось")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                                    .background(Color.orange.opacity(0.1))
+                                    .cornerRadius(8)
+                                }
+                                .padding(.bottom, 8)
+
+                                ProgressView(value: topic.progress)
+                                    .tint(topic.progress == 1.0 ? .green : .blue)
+                                    .padding(.bottom, 12)
+                            }
+
+                            if topic.tasks.isEmpty {
+                                VStack(spacing: 8) {
+                                    Image(systemName: "tray")
+                                        .font(.title2)
+                                        .foregroundStyle(.secondary)
+                                    Text("Нет задач в этом топике")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 20)
+                            } else {
+                                ForEach(topic.tasks.sorted(by: { $0.order < $1.order })) { task in
+                                    TaskNodeView(
+                                        task: task,
+                                        isAvailable: viewModel.isTaskAvailable(task, in: currentGoal),
+                                        onToggle: {
+                                            viewModel.toggleTask(task, in: topic.id, goalId: currentGoal.id)
+                                        }
+                                    )
+                                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                    .listRowSeparator(.hidden)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            withAnimation {
+                                                viewModel.deleteTask(task, from: topic.id, goalId: currentGoal.id)
+                                            }
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            }
+
+                            Button {
+                                selectedTopic = topic
+                                showingAddTask = true
+                            } label: {
+                                HStack {
+                                    Image(systemName: "plus.circle.fill")
+                                        .foregroundColor(.blue)
+                                    Text("Добавить задачу")
+                                        .fontWeight(.medium)
+                                    Spacer()
+                                }
+                                .font(.subheadline)
+                                .foregroundColor(.blue)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 12)
+                                .background(Color.blue.opacity(0.05))
+                                .cornerRadius(10)
+                            }
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        } header: {
+                            HStack {
+                                Image(systemName: "folder.fill")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                                Text(topic.title)
+                                    .font(.headline)
+                                    .textCase(nil)
+                                Spacer()
+                                if topic.totalTasksCount > 0 {
+                                    Text("\(Int(topic.progress * 100))%")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                withAnimation {
+                                    viewModel.deleteTopic(topic, from: currentGoal.id)
+                                }
+                            } label: {
+                                Label("Delete Topic", systemImage: "trash")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle(goal.title)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingAddTopic = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                }
+            }
+        }
+        .sheet(isPresented: $showingAddTopic) {
+            addTopicSheet
+        }
+        .sheet(isPresented: $showingAddTask) {
+            addTaskSheet
+        }
+    }
+
+    private var progressSection: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Overall Progress")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.secondary)
+
+                Text("\(currentGoal?.completedTasksCount ?? 0)/\(currentGoal?.totalTasksCount ?? 0)")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(Theme.primaryPurple)
+
+                Text("tasks completed")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .stroke(Color.gray.opacity(0.15), lineWidth: 10)
+                    .frame(width: 80, height: 80)
+
+                Circle()
+                    .trim(from: 0, to: currentGoal?.progress ?? 0)
+                    .stroke(
+                        currentGoal?.progress == 1.0 ? Theme.successGradient : Theme.primaryGradient,
+                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                    )
+                    .frame(width: 80, height: 80)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.spring(response: 0.6, dampingFraction: 0.7), value: currentGoal?.progress)
+
+                VStack(spacing: 2) {
+                    Text("\(Int((currentGoal?.progress ?? 0) * 100))%")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Theme.primaryPurple)
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Theme.cardGradient1)
+        )
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "list.bullet")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+
+            Text("No tasks yet")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            Text("Tap + to add your first task")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+        .listRowBackground(Color.clear)
+    }
+
+    private var addTopicSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Topic title", text: $newTopicTitle, axis: .vertical)
+                        .lineLimit(1...2)
+                }
+
+                Section {
+                    TextField("Description (optional)", text: $newTopicDescription, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                Section {
+                    Button("Create Topic") {
+                        viewModel.addTopic(to: goal.id, title: newTopicTitle, description: newTopicDescription)
+                        newTopicTitle = ""
+                        newTopicDescription = ""
+                        showingAddTopic = false
+                    }
+                    .disabled(newTopicTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .navigationTitle("New Topic")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        newTopicTitle = ""
+                        newTopicDescription = ""
+                        showingAddTopic = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var addTaskSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Task title", text: $newTaskTitle, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                Section {
+                    TextField("Description (optional)", text: $newTaskDescription, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+
+                if let selectedTopic = selectedTopic, !selectedTopic.tasks.isEmpty {
+                    Section {
+                        Text("This task will depend on: \"\(selectedTopic.tasks.last?.title ?? "")\"")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section {
+                    Button("Add Task") {
+                        if let selectedTopic = selectedTopic {
+                            viewModel.addTask(
+                                to: selectedTopic.id,
+                                in: goal.id,
+                                title: newTaskTitle,
+                                description: newTaskDescription
+                            )
+                        }
+                        newTaskTitle = ""
+                        newTaskDescription = ""
+                        showingAddTask = false
+                    }
+                    .disabled(newTaskTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .navigationTitle("New Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        newTaskTitle = ""
+                        newTaskDescription = ""
+                        showingAddTask = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+#Preview {
+    NavigationStack {
+        GoalDetailView(
+            goal: Goal(
+                title: "Learn SwiftUI",
+                topics: [
+                    Topic(
+                        title: "Basics",
+                        description: "Learn SwiftUI fundamentals",
+                        order: 0,
+                        tasks: [
+                            Task(title: "Complete tutorial", description: "Watch Apple's SwiftUI tutorial", order: 0),
+                            Task(title: "Build sample app", description: "Create a simple counter app", dependsOn: [UUID()], order: 1)
+                        ]
+                    )
+                ]
+            ),
+            viewModel: GoalViewModel()
+        )
+    }
+}
