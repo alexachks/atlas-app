@@ -29,7 +29,7 @@ I'm building this app to help me improve my productivity by breaking down big go
 ## Getting Started
 
 1. Clone the repo
-2. Open `To do App.xcodeproj` in Xcode
+2. Open `atlas.xcodeproj` in Xcode
 3. Configure Supabase credentials (see `.mcp.json.example`)
 4. Build and run
 

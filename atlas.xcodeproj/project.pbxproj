@@ -11,13 +11,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		84F6BAEF2EF0C48F00443915 /* To do App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "To do App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		84F6BAEF2EF0C48F00443915 /* atlas.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "atlas.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		84F6BAF12EF0C48F00443915 /* To do App */ = {
+		84F6BAF12EF0C48F00443915 /* atlas */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "To do App";
+			path = "atlas";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -37,7 +37,7 @@
 		84F6BAE62EF0C48F00443915 = {
 			isa = PBXGroup;
 			children = (
-				84F6BAF12EF0C48F00443915 /* To do App */,
+				84F6BAF12EF0C48F00443915 /* atlas */,
 				84F6BAF02EF0C48F00443915 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -45,7 +45,7 @@
 		84F6BAF02EF0C48F00443915 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				84F6BAEF2EF0C48F00443915 /* To do App.app */,
+				84F6BAEF2EF0C48F00443915 /* atlas.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -53,9 +53,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		84F6BAEE2EF0C48F00443915 /* To do App */ = {
+		84F6BAEE2EF0C48F00443915 /* atlas */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 84F6BAFA2EF0C49000443915 /* Build configuration list for PBXNativeTarget "To do App" */;
+			buildConfigurationList = 84F6BAFA2EF0C49000443915 /* Build configuration list for PBXNativeTarget "atlas" */;
 			buildPhases = (
 				84F6BAEB2EF0C48F00443915 /* Sources */,
 				84F6BAEC2EF0C48F00443915 /* Frameworks */,
@@ -66,14 +66,14 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				84F6BAF12EF0C48F00443915 /* To do App */,
+				84F6BAF12EF0C48F00443915 /* atlas */,
 			);
-			name = "To do App";
+			name = "atlas";
 			packageProductDependencies = (
 				84A415D32EF1A63000266A6A /* Supabase */,
 			);
-			productName = "To do App";
-			productReference = 84F6BAEF2EF0C48F00443915 /* To do App.app */;
+			productName = "atlas";
+			productReference = 84F6BAEF2EF0C48F00443915 /* atlas.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -91,7 +91,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 84F6BAEA2EF0C48F00443915 /* Build configuration list for PBXProject "To do App" */;
+			buildConfigurationList = 84F6BAEA2EF0C48F00443915 /* Build configuration list for PBXProject "atlas" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -108,7 +108,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				84F6BAEE2EF0C48F00443915 /* To do App */,
+				84F6BAEE2EF0C48F00443915 /* atlas */,
 			);
 		};
 /* End PBXProject section */
@@ -324,7 +324,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		84F6BAEA2EF0C48F00443915 /* Build configuration list for PBXProject "To do App" */ = {
+		84F6BAEA2EF0C48F00443915 /* Build configuration list for PBXProject "atlas" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				84F6BAF82EF0C49000443915 /* Debug */,
@@ -333,7 +333,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		84F6BAFA2EF0C49000443915 /* Build configuration list for PBXNativeTarget "To do App" */ = {
+		84F6BAFA2EF0C49000443915 /* Build configuration list for PBXNativeTarget "atlas" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				84F6BAFB2EF0C49000443915 /* Debug */,
