@@ -125,7 +125,7 @@ struct TaskNodeView: View {
 #Preview {
     List {
         TaskNodeView(
-            task: Task(
+            task: atlas.Task(
                 milestoneId: UUID(),
                 title: "Research immigration lawyers",
                 description: "Find 5 qualified lawyers in NYC area",
@@ -140,7 +140,7 @@ struct TaskNodeView: View {
         .listRowSeparator(.hidden)
 
         TaskNodeView(
-            task: Task(
+            task: atlas.Task(
                 milestoneId: UUID(),
                 title: "Locked task",
                 description: "This task is locked until dependencies complete",
@@ -156,7 +156,7 @@ struct TaskNodeView: View {
         .listRowSeparator(.hidden)
 
         TaskNodeView(
-            task: Task(
+            task: atlas.Task(
                 milestoneId: UUID(),
                 title: "Completed task",
                 description: "This task has been completed",

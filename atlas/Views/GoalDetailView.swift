@@ -178,8 +178,10 @@ struct GoalDetailView: View {
                     milestone: milestone,
                     viewModel: viewModel
                 )
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
+            } else {
+                Text("Error loading task details")
+                    .font(.headline)
+                    .padding()
             }
         }
     }
