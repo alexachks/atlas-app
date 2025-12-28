@@ -19,6 +19,10 @@ struct GoalDetailView: View {
     @State private var newTaskTitle = ""
     @State private var newTaskDescription = ""
 
+    // Task detail modal
+    @State private var showingTaskDetail = false
+    @State private var selectedTask: Task?
+
     private var currentGoal: Goal? {
         viewModel.goals.first(where: { $0.id == goal.id })
     }
@@ -164,6 +168,20 @@ struct GoalDetailView: View {
         .sheet(isPresented: $showingEditGoal) {
             editGoalSheet
         }
+        .sheet(isPresented: $showingTaskDetail) {
+            if let currentGoal = currentGoal,
+               let selectedTask = selectedTask,
+               let milestone = viewModel.milestonesByGoal[currentGoal.id]?.first(where: { $0.id == selectedTask.milestoneId }) {
+                TaskDetailView(
+                    task: selectedTask,
+                    goal: currentGoal,
+                    milestone: milestone,
+                    viewModel: viewModel
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+        }
     }
 
     @ViewBuilder
@@ -294,17 +312,12 @@ struct GoalDetailView: View {
                                 _Concurrency.Task {
                                     await viewModel.toggleTask(task)
                                 }
+                            },
+                            onTap: {
+                                selectedTask = task
+                                showingTaskDetail = true
                             }
                         )
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                _Concurrency.Task { () -> Void in
-                                    await viewModel.deleteTask(task)
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
                     }
                 }
             }
