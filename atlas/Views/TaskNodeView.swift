@@ -11,138 +11,113 @@ struct TaskNodeView: View {
     let task: Task
     let isAvailable: Bool
     let onToggle: () -> Void
-
-    @State private var isPressed = false
+    let onTap: () -> Void
 
     var body: some View {
-        Button(action: {
-            if isAvailable {
-                isPressed = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    isPressed = false
-                    onToggle()
-                }
-
-                let impact = UIImpactFeedbackGenerator(style: .medium)
-                impact.impactOccurred()
-            }
-        }) {
-            HStack(spacing: 16) {
-                statusIcon
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(task.title)
-                        .font(.body)
-                        .fontWeight(.medium)
-                        .foregroundStyle(textColor)
-                        .strikethrough(task.isCompleted)
-                        .multilineTextAlignment(.leading)
-
-                    if !task.description.isEmpty {
-                        Text(task.description)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-
-                    if !task.dependsOn.isEmpty && !task.isCompleted {
-                        HStack(spacing: 4) {
-                            Image(systemName: "link")
-                                .font(.caption2)
-                            Text("Depends on \(task.dependsOn.count) task\(task.dependsOn.count == 1 ? "" : "s")")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.orange.opacity(0.1))
-                        .cornerRadius(6)
-                    }
-
-                    if let minutes = task.estimatedMinutes {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                                .font(.caption2)
-                            Text("\(minutes) min")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(.blue)
+        HStack(spacing: 12) {
+            // Status icon (for toggle)
+            statusIcon
+                .onTapGesture {
+                    if isAvailable || task.isCompleted {
+                        onToggle()
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
                     }
                 }
 
-                Spacer()
+            // Task card (for opening details)
+            taskCard
+
+            Spacer()
+
+            if !task.dependsOn.isEmpty && !task.isCompleted {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.orange)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(backgroundColor)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(borderColor, lineWidth: isAvailable && !task.isCompleted ? 1.5 : 0)
-            )
         }
-        .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-        .opacity(isAvailable || task.isCompleted ? 1.0 : 0.5)
-        .disabled(!isAvailable && !task.isCompleted)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(backgroundColor)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var taskCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(task.title)
+                .font(.body)
+                .foregroundStyle(textColor)
+                .strikethrough(task.isCompleted, color: .secondary)
+                .multilineTextAlignment(.leading)
+                .onTapGesture {
+                    onTap()
+                }
+
+            if !task.description.isEmpty {
+                Text(task.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .onTapGesture {
+                        onTap()
+                    }
+            }
+
+            if let minutes = task.estimatedMinutes {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                    Text("\(minutes) min")
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
+                .onTapGesture {
+                    onTap()
+                }
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
+        .opacity(isAvailable || task.isCompleted ? 1.0 : 0.6)
     }
 
     private var statusIcon: some View {
         ZStack {
             if task.isCompleted {
-                Circle()
-                    .fill(Theme.successGradient)
-                    .frame(width: 32, height: 32)
-
-                Image(systemName: "checkmark")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.green)
             } else if isAvailable {
-                Circle()
-                    .strokeBorder(Theme.primaryGradient, lineWidth: 2.5)
-                    .frame(width: 32, height: 32)
+                Image(systemName: "circle")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.blue)
             } else {
-                Circle()
-                    .fill(Color.gray.opacity(0.2))
-                    .frame(width: 32, height: 32)
+                ZStack {
+                    Image(systemName: "circle")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color(.systemGray4))
 
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.gray)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color(.systemGray3))
+                }
             }
         }
     }
 
     private var textColor: Color {
-        if task.isCompleted {
-            return .secondary
-        } else if isAvailable {
-            return .primary
-        } else {
-            return .secondary
-        }
+        task.isCompleted ? .secondary : .primary
     }
 
     private var backgroundColor: Color {
         if task.isCompleted {
-            return Color.green.opacity(0.05)
+            return Color(.systemGray6).opacity(0.3)
         } else if isAvailable {
-            return Color.blue.opacity(0.03)
+            return Color(.systemGray6).opacity(0.5)
         } else {
-            return Color.gray.opacity(0.05)
-        }
-    }
-
-    private var borderColor: Color {
-        if task.isCompleted {
-            return Color.green.opacity(0.3)
-        } else if isAvailable {
-            return Color.blue.opacity(0.4)
-        } else {
-            return Color.gray.opacity(0.2)
+            return Color.clear
         }
     }
 }
@@ -151,37 +126,46 @@ struct TaskNodeView: View {
     List {
         TaskNodeView(
             task: Task(
+                milestoneId: UUID(),
                 title: "Research immigration lawyers",
                 description: "Find 5 qualified lawyers in NYC area",
+                orderIndex: 0,
                 estimatedMinutes: 45
             ),
             isAvailable: true,
-            onToggle: {}
+            onToggle: {},
+            onTap: {}
         )
         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .listRowSeparator(.hidden)
 
         TaskNodeView(
             task: Task(
+                milestoneId: UUID(),
                 title: "Locked task",
                 description: "This task is locked until dependencies complete",
                 dependsOn: [UUID()],
+                orderIndex: 1,
                 estimatedMinutes: 30
             ),
             isAvailable: false,
-            onToggle: {}
+            onToggle: {},
+            onTap: {}
         )
         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .listRowSeparator(.hidden)
 
         TaskNodeView(
             task: Task(
+                milestoneId: UUID(),
                 title: "Completed task",
                 description: "This task has been completed",
-                isCompleted: true
+                isCompleted: true,
+                orderIndex: 2
             ),
             isAvailable: false,
-            onToggle: {}
+            onToggle: {},
+            onTap: {}
         )
         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
         .listRowSeparator(.hidden)

@@ -9,22 +9,36 @@ import SwiftUI
 
 struct AllTasksView: View {
     @ObservedObject var viewModel: GoalViewModel
+    @State private var showingAIChat = false
+    @State private var showingAddTask = false
 
-    private var availableTasks: [(task: Task, goal: Goal, topicId: UUID)] {
-        var result: [(task: Task, goal: Goal, topicId: UUID)] = []
+    private var availableTasks: [(task: Task, goal: Goal, milestoneId: UUID)] {
+        var result: [(task: Task, goal: Goal, milestoneId: UUID)] = []
 
         for goal in viewModel.goals {
-            let completedTaskIds = goal.completedTaskIds
-            for topic in goal.topics {
-                for task in topic.tasks where !task.isCompleted {
-                    if task.isAvailable(completedTaskIds: completedTaskIds) {
-                        result.append((task: task, goal: goal, topicId: topic.id))
+            guard let milestones = viewModel.milestonesByGoal[goal.id] else { continue }
+
+            // Собираем все completed task IDs для этого goal
+            var completedTaskIds = Set<UUID>()
+            for milestone in milestones {
+                if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                    completedTaskIds.formUnion(tasks.filter { $0.isCompleted }.map { $0.id })
+                }
+            }
+
+            // Проходим по всем milestones и tasks
+            for milestone in milestones {
+                if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                    for task in tasks where !task.isCompleted {
+                        if task.isAvailable(completedTaskIds: completedTaskIds) {
+                            result.append((task: task, goal: goal, milestoneId: milestone.id))
+                        }
                     }
                 }
             }
         }
 
-        return result.sorted { (first: (task: Task, goal: Goal, topicId: UUID), second: (task: Task, goal: Goal, topicId: UUID)) in
+        return result.sorted { (first: (task: Task, goal: Goal, milestoneId: UUID), second: (task: Task, goal: Goal, milestoneId: UUID)) in
             first.task.createdAt < second.task.createdAt
         }
     }
@@ -35,23 +49,54 @@ struct AllTasksView: View {
                 if availableTasks.isEmpty {
                     emptyStateView
                 } else {
-                    Section {
-                        ForEach(availableTasks, id: \.task.id) { item in
-                            AvailableTaskRow(
-                                task: item.task,
-                                goal: item.goal,
-                                onToggle: {
-                                    viewModel.toggleTask(item.task, in: item.topicId, goalId: item.goal.id)
+                    ForEach(availableTasks, id: \.task.id) { item in
+                        AvailableTaskRow(
+                            task: item.task,
+                            goal: item.goal,
+                            onToggle: {
+                                BackgroundTask {
+                                    await viewModel.toggleTask(item.task)
                                 }
-                            )
-                        }
-                    } header: {
-                        Text("Available Now (\(availableTasks.count))")
+                            }
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
-            .listStyle(.insetGrouped)
+            .listStyle(.plain)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Tasks")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingAIChat = true
+                    } label: {
+                        Image(systemName: "brain.head.profile")
+                            .font(.title3)
+                            .foregroundColor(.blue)
+                    }
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showingAddTask = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingAIChat) {
+                AIChatView(goalViewModel: viewModel)
+            }
+            .sheet(isPresented: $showingAddTask) {
+                AddTaskSheet(viewModel: viewModel, isPresented: $showingAddTask)
+            }
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
 
@@ -81,58 +126,146 @@ struct AvailableTaskRow: View {
     let goal: Goal
     let onToggle: () -> Void
 
-    @State private var isPressed = false
+    @State private var isCompleting = false
 
     var body: some View {
         Button(action: {
-            isPressed = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                isPressed = false
-                onToggle()
+            let impact = UIImpactFeedbackGenerator(style: .light)
+            impact.impactOccurred()
+
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                isCompleting = true
             }
 
-            let impact = UIImpactFeedbackGenerator(style: .medium)
-            impact.impactOccurred()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                onToggle()
+            }
         }) {
-            HStack(spacing: 16) {
-                Circle()
-                    .strokeBorder(Theme.primaryGradient, lineWidth: 2.5)
-                    .frame(width: 32, height: 32)
+            HStack(spacing: 12) {
+                // iOS Reminders-style checkbox
+                ZStack {
+                    Circle()
+                        .strokeBorder(isCompleting ? Color.clear : Color(.systemGray3), lineWidth: 2)
+                        .frame(width: 24, height: 24)
 
-                VStack(alignment: .leading, spacing: 6) {
+                    if isCompleting {
+                        Circle()
+                            .fill(Color.blue)
+                            .frame(width: 24, height: 24)
+
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
                         .font(.body)
-                        .fontWeight(.medium)
                         .foregroundStyle(.primary)
+                        .strikethrough(isCompleting, color: .secondary)
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "target")
+                    // Task description
+                    if !task.description.isEmpty {
+                        Text(task.description)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+
+                    // Goal badge - more subtle
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder")
                             .font(.caption2)
                         Text(goal.title)
                             .font(.caption)
-                            .fontWeight(.medium)
                     }
-                    .foregroundStyle(Theme.primaryBlue)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(Theme.primaryBlue.opacity(0.1))
-                    )
+                    .foregroundStyle(.secondary)
                 }
 
                 Spacer()
-
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Theme.primaryGradient)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
             .contentShape(Rectangle())
+            .opacity(isCompleting ? 0.5 : 1.0)
         }
         .buttonStyle(.plain)
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+    }
+}
+
+struct AddTaskSheet: View {
+    @ObservedObject var viewModel: GoalViewModel
+    @Binding var isPresented: Bool
+
+    @State private var selectedGoal: Goal?
+    @State private var selectedMilestone: Milestone?
+    @State private var taskTitle = ""
+    @State private var taskDescription = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Goal", selection: $selectedGoal) {
+                        Text("Select a goal").tag(nil as Goal?)
+                        ForEach(viewModel.goals) { goal in
+                            Text(goal.title).tag(goal as Goal?)
+                        }
+                    }
+
+                    if let selectedGoal = selectedGoal,
+                       let milestones = viewModel.milestonesByGoal[selectedGoal.id],
+                       !milestones.isEmpty {
+                        Picker("Milestone", selection: $selectedMilestone) {
+                            Text("Select a milestone").tag(nil as Milestone?)
+                            ForEach(milestones.sorted(by: { $0.orderIndex < $1.orderIndex })) { milestone in
+                                Text(milestone.title).tag(milestone as Milestone?)
+                            }
+                        }
+                    }
+                }
+
+                Section {
+                    TextField("Task title", text: $taskTitle, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                Section {
+                    TextField("Description (optional)", text: $taskDescription, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+
+                Section {
+                    Button("Add Task") {
+                        if let selectedMilestone = selectedMilestone {
+                            BackgroundTask {
+                                await viewModel.addTask(
+                                    to: selectedMilestone.id,
+                                    title: taskTitle,
+                                    description: taskDescription
+                                )
+                            }
+                            isPresented = false
+                        }
+                    }
+                    .disabled(taskTitle.trimmingCharacters(in: .whitespaces).isEmpty || selectedGoal == nil || selectedMilestone == nil)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .navigationTitle("New Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                }
+            }
+        }
     }
 }
 

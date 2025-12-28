@@ -33,6 +33,9 @@ final class AuthViewModel: ObservableObject {
         supabase.$isInitializing
             .assign(to: \.isInitializing, on: self)
             .store(in: &cancellables)
+
+        // Start auth listener after UI is initialized
+        supabase.startAuthListener()
     }
 
     func signUp(email: String, password: String, fullName: String) async {

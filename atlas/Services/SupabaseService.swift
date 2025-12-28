@@ -18,6 +18,10 @@ final class SupabaseService: ObservableObject {
     @Published var session: Session?
     @Published var isInitializing = true
 
+    var currentUserId: UUID? {
+        session?.user.id
+    }
+
     private init() {
         // Supabase configuration
         let supabaseURL = URL(string: "https://sqchwnbwcnqegwtffxbz.supabase.co")!
@@ -25,16 +29,23 @@ final class SupabaseService: ObservableObject {
 
         client = SupabaseClient(
             supabaseURL: supabaseURL,
-            supabaseKey: supabaseAnonKey
+            supabaseKey: supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: SupabaseClientOptions.AuthOptions(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
         )
-
-        // Listen to auth state changes
-        self.startListeningToAuthChanges()
     }
 
-    private func startListeningToAuthChanges() {
-        _Concurrency.Task { [weak self] in
+    // MARK: - Auth Listener
+
+    /// Starts listening to auth state changes
+    /// Should be called after UI is initialized to avoid race conditions
+    func startAuthListener() {
+        BackgroundTask { [weak self] in
             guard let self else { return }
+
             for await state in await self.client.auth.authStateChanges {
                 let session = state.session
                 await MainActor.run {
@@ -44,6 +55,7 @@ final class SupabaseService: ObservableObject {
                         self.isInitializing = false
                     }
                 }
+
                 if let session {
                     await self.fetchUserProfile(userId: session.user.id)
                 } else {

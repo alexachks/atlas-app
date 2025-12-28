@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct GoalsListView: View {
     @ObservedObject var viewModel: GoalViewModel
@@ -29,15 +30,15 @@ struct GoalsListView: View {
                             }
                             .opacity(0)
 
-                            GoalCardView(goal: goal)
+                            GoalCardView(goal: goal, viewModel: viewModel)
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
-                                withAnimation {
-                                    viewModel.deleteGoal(goal)
+                                _Concurrency.Task { () -> Void in
+                                    await viewModel.deleteGoal(goal)
                                 }
                             } label: {
                                 Label("Delete", systemImage: "trash")
@@ -47,18 +48,16 @@ struct GoalsListView: View {
                 }
             }
             .listStyle(.plain)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Goals")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         showingAIChat = true
                     } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "brain.head.profile")
-                            Text("AI")
-                        }
-                        .font(.headline)
-                        .foregroundColor(.blue)
+                        Image(systemName: "brain.head.profile")
+                            .font(.title3)
+                            .foregroundColor(.blue)
                     }
                 }
 
@@ -224,7 +223,9 @@ struct GoalsListView: View {
 
     private func createGoal() {
         let description = newGoalDescription.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newGoalDescription
-        viewModel.addGoal(title: newGoalTitle, description: description, deadline: newGoalDeadline)
+        _Concurrency.Task { () -> Void in
+            await viewModel.addGoal(title: newGoalTitle, description: description, deadline: newGoalDeadline)
+        }
         resetForm()
         showingAddGoal = false
     }
@@ -239,9 +240,27 @@ struct GoalsListView: View {
 
 struct GoalCardView: View {
     let goal: Goal
+    let viewModel: GoalViewModel
+
+    private var progress: Double {
+        guard let milestones = viewModel.milestonesByGoal[goal.id] else { return 0.0 }
+
+        var totalTasks = 0
+        var completedTasks = 0
+
+        for milestone in milestones {
+            if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                totalTasks += tasks.count
+                completedTasks += tasks.filter { $0.isCompleted }.count
+            }
+        }
+
+        guard totalTasks > 0 else { return 0.0 }
+        return Double(completedTasks) / Double(totalTasks)
+    }
 
     private var accentColor: Color {
-        goal.progress == 1.0 ? .green : .blue
+        progress == 1.0 ? .green : .blue
     }
 
     private var daysLeft: Int? {
@@ -297,12 +316,12 @@ struct GoalCardView: View {
                         .frame(width: 48, height: 48)
 
                     Circle()
-                        .trim(from: 0, to: goal.progress)
+                        .trim(from: 0, to: progress)
                         .stroke(accentColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                         .frame(width: 48, height: 48)
                         .rotationEffect(.degrees(-90))
 
-                    Text("\(Int(goal.progress * 100))%")
+                    Text("\(Int(progress * 100))%")
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
@@ -315,9 +334,9 @@ struct GoalCardView: View {
             }
         }
         .padding(20)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
     }
 }
 

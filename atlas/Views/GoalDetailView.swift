@@ -10,17 +10,34 @@ import SwiftUI
 struct GoalDetailView: View {
     let goal: Goal
     @ObservedObject var viewModel: GoalViewModel
-    @State private var showingAddTopic = false
-    @State private var selectedTopic: Topic?
+    @State private var showingAddMilestone = false
+    @State private var selectedMilestone: Milestone?
     @State private var showingAddTask = false
     @State private var showingEditGoal = false
-    @State private var newTopicTitle = ""
-    @State private var newTopicDescription = ""
+    @State private var newMilestoneTitle = ""
+    @State private var newMilestoneDescription = ""
     @State private var newTaskTitle = ""
     @State private var newTaskDescription = ""
 
     private var currentGoal: Goal? {
         viewModel.goals.first(where: { $0.id == goal.id })
+    }
+
+    private func calculateProgress(for goal: Goal) -> Double {
+        guard let milestones = viewModel.milestonesByGoal[goal.id] else { return 0.0 }
+
+        var totalTasks = 0
+        var completedTasks = 0
+
+        for milestone in milestones {
+            if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                totalTasks += tasks.count
+                completedTasks += tasks.filter { $0.isCompleted }.count
+            }
+        }
+
+        guard totalTasks > 0 else { return 0.0 }
+        return Double(completedTasks) / Double(totalTasks)
     }
 
     var body: some View {
@@ -35,18 +52,47 @@ struct GoalDetailView: View {
                         VStack(spacing: 0) {
                             // White header section content
                             VStack(spacing: 16) {
-                                // Description (if exists)
-                                if let description = currentGoal.description, !description.isEmpty {
-                                    Text(description)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .padding(.horizontal, 20)
-                                }
+                                // Title, Description and Progress Ring
+                                HStack(alignment: .top, spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text(currentGoal.title)
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                            .foregroundStyle(.primary)
 
-                                // Compact stats widget with glassmorphism
-                                statsWidget(currentGoal)
-                                    .padding(.horizontal, 20)
+                                        if let description = currentGoal.description, !description.isEmpty {
+                                            Text(description)
+                                                .font(.subheadline)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+
+                                    Spacer()
+
+                                    // Progress ring
+                                    ZStack {
+                                        let progress = calculateProgress(for: currentGoal)
+
+                                        Circle()
+                                            .stroke(Color(.systemGray5), lineWidth: 5)
+                                            .frame(width: 56, height: 56)
+
+                                        Circle()
+                                            .trim(from: 0, to: progress)
+                                            .stroke(
+                                                progress == 1.0 ? Color.green : Color.blue,
+                                                style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                                            )
+                                            .frame(width: 56, height: 56)
+                                            .rotationEffect(.degrees(-90))
+
+                                        Text("\(Int(progress * 100))%")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding(.horizontal, 20)
                             }
                             .padding(.top, 12)
                             .padding(.bottom, 20)
@@ -65,13 +111,13 @@ struct GoalDetailView: View {
                                     .ignoresSafeArea(edges: .bottom)
 
                                 VStack(spacing: 12) {
-                                    if currentGoal.topics.isEmpty {
+                                    if let milestones = viewModel.milestonesByGoal[currentGoal.id], !milestones.isEmpty {
+                                        ForEach(milestones.sorted(by: { $0.orderIndex < $1.orderIndex })) { milestone in
+                                            milestoneCard(milestone: milestone, currentGoal: currentGoal)
+                                        }
+                                    } else {
                                         emptyStateView
                                             .padding(.top, 20)
-                                    } else {
-                                        ForEach(currentGoal.topics.sorted(by: { $0.order < $1.order })) { topic in
-                                            topicCard(topic: topic, currentGoal: currentGoal)
-                                        }
                                     }
 
                                     Spacer(minLength: 0)
@@ -86,15 +132,15 @@ struct GoalDetailView: View {
                 }
             }
         }
-        .navigationTitle(goal.title)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
                     Button {
-                        showingAddTopic = true
+                        showingAddMilestone = true
                     } label: {
-                        Label("Add Topic", systemImage: "folder.badge.plus")
+                        Label("Add Milestone", systemImage: "folder.badge.plus")
                     }
 
                     Button {
@@ -109,8 +155,8 @@ struct GoalDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingAddTopic) {
-            addTopicSheet
+        .sheet(isPresented: $showingAddMilestone) {
+            addMilestoneSheet
         }
         .sheet(isPresented: $showingAddTask) {
             addTaskSheet
@@ -122,35 +168,16 @@ struct GoalDetailView: View {
 
     @ViewBuilder
     private func statsWidget(_ goal: Goal) -> some View {
+        let (completedCount, totalCount) = calculateTaskStats(for: goal.id)
+
         HStack(spacing: 16) {
-            // Progress ring
-            ZStack {
-                Circle()
-                    .stroke(Color(.systemGray5), lineWidth: 5)
-                    .frame(width: 56, height: 56)
-
-                Circle()
-                    .trim(from: 0, to: goal.progress)
-                    .stroke(
-                        goal.progress == 1.0 ? Color.green : Color.blue,
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                    )
-                    .frame(width: 56, height: 56)
-                    .rotationEffect(.degrees(-90))
-
-                Text("\(Int(goal.progress * 100))%")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-            }
-
             // Stats grid
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.callout)
                         .foregroundStyle(.green)
-                    Text("\(goal.completedTasksCount) completed")
+                    Text("\(completedCount) completed")
                         .font(.subheadline)
                         .foregroundStyle(.primary)
                 }
@@ -159,7 +186,7 @@ struct GoalDetailView: View {
                     Image(systemName: "circle.dashed")
                         .font(.callout)
                         .foregroundStyle(.orange)
-                    Text("\(goal.totalTasksCount - goal.completedTasksCount) remaining")
+                    Text("\(totalCount - completedCount) remaining")
                         .font(.subheadline)
                         .foregroundStyle(.primary)
                 }
@@ -172,20 +199,29 @@ struct GoalDetailView: View {
                 deadlineBadge(deadline: deadline)
             }
         }
-        .padding(16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, 20)
+    }
+
+    private func calculateTaskStats(for goalId: UUID) -> (completed: Int, total: Int) {
+        guard let milestones = viewModel.milestonesByGoal[goalId] else { return (0, 0) }
+
+        var completed = 0
+        var total = 0
+
+        for milestone in milestones {
+            if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                total += tasks.count
+                completed += tasks.filter { $0.isCompleted }.count
+            }
+        }
+
+        return (completed, total)
     }
 
     @ViewBuilder
     private func deadlineBadge(deadline: Date) -> some View {
         VStack(spacing: 6) {
             if let days = daysRemaining(for: deadline) {
-                Image(systemName: isOverdue(deadline) ? "exclamationmark.triangle.fill" : "calendar")
-                    .font(.title3)
-                    .foregroundStyle(isOverdue(deadline) ? .red : .blue)
-
                 VStack(spacing: 2) {
                     Text("\(abs(days))")
                         .font(.title2)
@@ -202,21 +238,20 @@ struct GoalDetailView: View {
     }
 
     @ViewBuilder
-    private func topicCard(topic: Topic, currentGoal: Goal) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Topic header
-            HStack(alignment: .center, spacing: 10) {
-                Image(systemName: "folder.fill")
-                    .font(.body)
-                    .foregroundStyle(.blue)
+    private func milestoneCard(milestone: Milestone, currentGoal: Goal) -> some View {
+        let tasks = viewModel.tasksByMilestone[milestone.id] ?? []
+        let completedCount = tasks.filter { $0.isCompleted }.count
 
+        VStack(alignment: .leading, spacing: 14) {
+            // Milestone header
+            HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(topic.title)
+                    Text(milestone.title)
                         .font(.headline)
                         .foregroundStyle(.primary)
 
-                    if !topic.description.isEmpty {
-                        Text(topic.description)
+                    if !milestone.description.isEmpty {
+                        Text(milestone.description)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
@@ -225,8 +260,8 @@ struct GoalDetailView: View {
 
                 Spacer()
 
-                if topic.totalTasksCount > 0 {
-                    Text("\(topic.completedTasksCount)/\(topic.totalTasksCount)")
+                if !tasks.isEmpty {
+                    Text("\(completedCount)/\(tasks.count)")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
@@ -237,14 +272,8 @@ struct GoalDetailView: View {
                 }
             }
 
-            // Progress bar (only if has tasks)
-            if topic.totalTasksCount > 0 {
-                ProgressView(value: topic.progress)
-                    .tint(topic.progress == 1.0 ? .green : .blue)
-            }
-
             // Tasks list or empty state
-            if topic.tasks.isEmpty {
+            if tasks.isEmpty {
                 VStack(spacing: 6) {
                     Image(systemName: "tray")
                         .font(.title3)
@@ -257,18 +286,20 @@ struct GoalDetailView: View {
                 .padding(.vertical, 20)
             } else {
                 VStack(spacing: 6) {
-                    ForEach(topic.tasks.sorted(by: { $0.order < $1.order })) { task in
+                    ForEach(tasks.sorted(by: { $0.orderIndex < $1.orderIndex })) { task in
                         TaskNodeView(
                             task: task,
-                            isAvailable: viewModel.isTaskAvailable(task, in: currentGoal),
+                            isAvailable: viewModel.isTaskAvailable(task, in: currentGoal.id),
                             onToggle: {
-                                viewModel.toggleTask(task, in: topic.id, goalId: currentGoal.id)
+                                _Concurrency.Task {
+                                    await viewModel.toggleTask(task)
+                                }
                             }
                         )
                         .contextMenu {
                             Button(role: .destructive) {
-                                withAnimation {
-                                    viewModel.deleteTask(task, from: topic.id, goalId: currentGoal.id)
+                                _Concurrency.Task { () -> Void in
+                                    await viewModel.deleteTask(task)
                                 }
                             } label: {
                                 Label("Delete", systemImage: "trash")
@@ -280,7 +311,7 @@ struct GoalDetailView: View {
 
             // Add task button
             Button {
-                selectedTopic = topic
+                selectedMilestone = milestone
                 showingAddTask = true
             } label: {
                 HStack(spacing: 6) {
@@ -303,11 +334,11 @@ struct GoalDetailView: View {
         .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
         .contextMenu {
             Button(role: .destructive) {
-                withAnimation {
-                    viewModel.deleteTopic(topic, from: currentGoal.id)
+                _Concurrency.Task { () -> Void in
+                    await viewModel.deleteMilestone(milestone)
                 }
             } label: {
-                Label("Delete Topic", systemImage: "trash")
+                Label("Delete Milestone", systemImage: "trash")
             }
         }
     }
@@ -334,11 +365,11 @@ struct GoalDetailView: View {
                 .foregroundStyle(.tertiary)
 
             VStack(spacing: 6) {
-                Text("No topics yet")
+                Text("No milestones yet")
                     .font(.headline)
                     .foregroundStyle(.secondary)
 
-                Text("Tap the menu to create your first topic")
+                Text("Tap the menu to create your first milestone")
                     .font(.subheadline)
                     .foregroundStyle(.tertiary)
             }
@@ -347,38 +378,42 @@ struct GoalDetailView: View {
         .padding(.vertical, 60)
     }
 
-    private var addTopicSheet: some View {
+    private var addMilestoneSheet: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Topic title", text: $newTopicTitle, axis: .vertical)
+                    TextField("Milestone title", text: $newMilestoneTitle, axis: .vertical)
                         .lineLimit(1...2)
                 }
 
                 Section {
-                    TextField("Description (optional)", text: $newTopicDescription, axis: .vertical)
+                    TextField("Description (optional)", text: $newMilestoneDescription, axis: .vertical)
                         .lineLimit(2...4)
                 }
 
                 Section {
-                    Button("Create Topic") {
-                        viewModel.addTopic(to: goal.id, title: newTopicTitle, description: newTopicDescription)
-                        newTopicTitle = ""
-                        newTopicDescription = ""
-                        showingAddTopic = false
+                    Button("Create Milestone") {
+                        _Concurrency.Task { () -> Void in
+                            await viewModel.addMilestone(to: goal.id, title: newMilestoneTitle, description: newMilestoneDescription)
+                            await MainActor.run {
+                                newMilestoneTitle = ""
+                                newMilestoneDescription = ""
+                                showingAddMilestone = false
+                            }
+                        }
                     }
-                    .disabled(newTopicTitle.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(newMilestoneTitle.trimmingCharacters(in: .whitespaces).isEmpty)
                     .frame(maxWidth: .infinity)
                 }
             }
-            .navigationTitle("New Topic")
+            .navigationTitle("New Milestone")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
-                        newTopicTitle = ""
-                        newTopicDescription = ""
-                        showingAddTopic = false
+                        newMilestoneTitle = ""
+                        newMilestoneDescription = ""
+                        showingAddMilestone = false
                     }
                 }
             }
@@ -399,27 +434,37 @@ struct GoalDetailView: View {
                         .lineLimit(3...6)
                 }
 
-                if let selectedTopic = selectedTopic, !selectedTopic.tasks.isEmpty {
-                    Section {
-                        Text("This task will depend on: \"\(selectedTopic.tasks.last?.title ?? "")\"")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                if let selectedMilestone = selectedMilestone {
+                    let tasks = viewModel.tasksByMilestone[selectedMilestone.id] ?? []
+                    if !tasks.isEmpty {
+                        Section {
+                            Text("This task will depend on: \"\(tasks.last?.title ?? "")\"")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
                 Section {
                     Button("Add Task") {
-                        if let selectedTopic = selectedTopic {
-                            viewModel.addTask(
-                                to: selectedTopic.id,
-                                in: goal.id,
-                                title: newTaskTitle,
-                                description: newTaskDescription
-                            )
+                        if let selectedMilestone = selectedMilestone {
+                            let tasks = viewModel.tasksByMilestone[selectedMilestone.id] ?? []
+                            let dependsOn = tasks.isEmpty ? [] : [tasks.last!.id]
+
+                            _Concurrency.Task { () -> Void in
+                                await viewModel.addTask(
+                                    to: selectedMilestone.id,
+                                    title: newTaskTitle,
+                                    description: newTaskDescription,
+                                    dependsOn: dependsOn
+                                )
+                                await MainActor.run {
+                                    newTaskTitle = ""
+                                    newTaskDescription = ""
+                                    showingAddTask = false
+                                }
+                            }
                         }
-                        newTaskTitle = ""
-                        newTaskDescription = ""
-                        showingAddTask = false
                     }
                     .disabled(newTaskTitle.trimmingCharacters(in: .whitespaces).isEmpty)
                     .frame(maxWidth: .infinity)
@@ -459,7 +504,9 @@ struct GoalDetailView: View {
                         get: { currentGoal?.description ?? "" },
                         set: { newValue in
                             if let currentGoal = currentGoal {
-                                viewModel.updateGoalDescription(goalId: currentGoal.id, description: newValue)
+                                _Concurrency.Task { () -> Void in
+                                    await viewModel.updateGoalDescription(goalId: currentGoal.id, description: newValue)
+                                }
                             }
                         }
                     ), axis: .vertical)
@@ -475,7 +522,9 @@ struct GoalDetailView: View {
                             get: { currentGoal?.deadline ?? Date() },
                             set: { newValue in
                                 if let currentGoal = currentGoal {
-                                    viewModel.updateGoalDeadline(goalId: currentGoal.id, deadline: newValue)
+                                    _Concurrency.Task { () -> Void in
+                                        await viewModel.updateGoalDeadline(goalId: currentGoal.id, deadline: newValue)
+                                    }
                                 }
                             }
                         ),
@@ -504,20 +553,10 @@ struct GoalDetailView: View {
     NavigationStack {
         GoalDetailView(
             goal: Goal(
+                userId: UUID(),
                 title: "Learn SwiftUI",
                 description: "Master SwiftUI development from basics to advanced",
-                deadline: Calendar.current.date(byAdding: .day, value: 30, to: Date()),
-                topics: [
-                    Topic(
-                        title: "Basics",
-                        description: "Learn SwiftUI fundamentals",
-                        order: 0,
-                        tasks: [
-                            Task(title: "Complete tutorial", description: "Watch Apple's SwiftUI tutorial", order: 0),
-                            Task(title: "Build sample app", description: "Create a simple counter app", dependsOn: [UUID()], order: 1)
-                        ]
-                    )
-                ]
+                deadline: Calendar.current.date(byAdding: .day, value: 30, to: Date())
             ),
             viewModel: GoalViewModel()
         )

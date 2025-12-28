@@ -7,17 +7,84 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		845A455E2EFF4643007D0A6D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 845A45532EFF4643007D0A6D /* Assets.xcassets */; };
+		845A455F2EFF4643007D0A6D /* GoalDetailView.swift.backup in Resources */ = {isa = PBXBuildFile; fileRef = 845A454D2EFF4643007D0A6D /* GoalDetailView.swift.backup */; };
+		845A45612EFF4643007D0A6D /* FactExtractionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A453D2EFF4643007D0A6D /* FactExtractionService.swift */; };
+		845A45622EFF4643007D0A6D /* GoalsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A454E2EFF4643007D0A6D /* GoalsListView.swift */; };
+		845A45632EFF4643007D0A6D /* GoalViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45452EFF4643007D0A6D /* GoalViewModel.swift */; };
+		845A45642EFF4643007D0A6D /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45422EFF4643007D0A6D /* Theme.swift */; };
+		845A45652EFF4643007D0A6D /* UserFact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A453A2EFF4643007D0A6D /* UserFact.swift */; };
+		845A45662EFF4643007D0A6D /* StatCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45572EFF4643007D0A6D /* StatCardView.swift */; };
+		845A45672EFF4643007D0A6D /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45402EFF4643007D0A6D /* SupabaseService.swift */; };
+		845A45682EFF4643007D0A6D /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45502EFF4643007D0A6D /* SplashView.swift */; };
+		845A45692EFF4643007D0A6D /* Task.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45372EFF4643007D0A6D /* Task.swift */; };
+		845A456A2EFF4643007D0A6D /* TypeAliases.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A455C2EFF4643007D0A6D /* TypeAliases.swift */; };
+		845A456B2EFF4643007D0A6D /* GoalsSupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A453E2EFF4643007D0A6D /* GoalsSupabaseService.swift */; };
+		845A456C2EFF4643007D0A6D /* Topic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45382EFF4643007D0A6D /* Topic.swift */; };
+		845A456D2EFF4643007D0A6D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45542EFF4643007D0A6D /* ContentView.swift */; };
+		845A456E2EFF4643007D0A6D /* SpeechRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A453F2EFF4643007D0A6D /* SpeechRecognitionService.swift */; };
+		845A456F2EFF4643007D0A6D /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45392EFF4643007D0A6D /* User.swift */; };
+		845A45702EFF4643007D0A6D /* GoalDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A454C2EFF4643007D0A6D /* GoalDetailView.swift */; };
+		845A45712EFF4643007D0A6D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A454F2EFF4643007D0A6D /* SettingsView.swift */; };
+		845A45722EFF4643007D0A6D /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45552EFF4643007D0A6D /* DashboardView.swift */; };
+		845A45732EFF4643007D0A6D /* TodoRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A455A2EFF4643007D0A6D /* TodoRowView.swift */; };
+		845A45742EFF4643007D0A6D /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45482EFF4643007D0A6D /* SignUpView.swift */; };
+		845A45752EFF4643007D0A6D /* Milestone.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45362EFF4643007D0A6D /* Milestone.swift */; };
+		845A45762EFF4643007D0A6D /* To_do_AppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45582EFF4643007D0A6D /* To_do_AppApp.swift */; };
+		845A45772EFF4643007D0A6D /* TaskNodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45512EFF4643007D0A6D /* TaskNodeView.swift */; };
+		845A45782EFF4643007D0A6D /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45442EFF4643007D0A6D /* AuthViewModel.swift */; };
+		845A45792EFF4643007D0A6D /* AIChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A454A2EFF4643007D0A6D /* AIChatView.swift */; };
+		845A457A2EFF4643007D0A6D /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45472EFF4643007D0A6D /* LoginView.swift */; };
+		845A457B2EFF4643007D0A6D /* TodoViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A455B2EFF4643007D0A6D /* TodoViewModel.swift */; };
+		845A457C2EFF4643007D0A6D /* AIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A453C2EFF4643007D0A6D /* AIService.swift */; };
+		845A457D2EFF4643007D0A6D /* TodoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45592EFF4643007D0A6D /* TodoItem.swift */; };
+		845A457E2EFF4643007D0A6D /* Goal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A45352EFF4643007D0A6D /* Goal.swift */; };
+		845A457F2EFF4643007D0A6D /* AllTasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 845A454B2EFF4643007D0A6D /* AllTasksView.swift */; };
 		8480B93F2EF1A8BC00D0BD87 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 84A415D32EF1A63000266A6A /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		84F6BAEF2EF0C48F00443915 /* atlas.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "atlas.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		845A45352EFF4643007D0A6D /* Goal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Goal.swift; sourceTree = "<group>"; };
+		845A45362EFF4643007D0A6D /* Milestone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Milestone.swift; sourceTree = "<group>"; };
+		845A45372EFF4643007D0A6D /* Task.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Task.swift; sourceTree = "<group>"; };
+		845A45382EFF4643007D0A6D /* Topic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Topic.swift; sourceTree = "<group>"; };
+		845A45392EFF4643007D0A6D /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		845A453A2EFF4643007D0A6D /* UserFact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserFact.swift; sourceTree = "<group>"; };
+		845A453C2EFF4643007D0A6D /* AIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIService.swift; sourceTree = "<group>"; };
+		845A453D2EFF4643007D0A6D /* FactExtractionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FactExtractionService.swift; sourceTree = "<group>"; };
+		845A453E2EFF4643007D0A6D /* GoalsSupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsSupabaseService.swift; sourceTree = "<group>"; };
+		845A453F2EFF4643007D0A6D /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
+		845A45402EFF4643007D0A6D /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		845A45422EFF4643007D0A6D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		845A45442EFF4643007D0A6D /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		845A45452EFF4643007D0A6D /* GoalViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalViewModel.swift; sourceTree = "<group>"; };
+		845A45472EFF4643007D0A6D /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		845A45482EFF4643007D0A6D /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		845A454A2EFF4643007D0A6D /* AIChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatView.swift; sourceTree = "<group>"; };
+		845A454B2EFF4643007D0A6D /* AllTasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllTasksView.swift; sourceTree = "<group>"; };
+		845A454C2EFF4643007D0A6D /* GoalDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalDetailView.swift; sourceTree = "<group>"; };
+		845A454D2EFF4643007D0A6D /* GoalDetailView.swift.backup */ = {isa = PBXFileReference; lastKnownFileType = text; path = GoalDetailView.swift.backup; sourceTree = "<group>"; };
+		845A454E2EFF4643007D0A6D /* GoalsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalsListView.swift; sourceTree = "<group>"; };
+		845A454F2EFF4643007D0A6D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		845A45502EFF4643007D0A6D /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		845A45512EFF4643007D0A6D /* TaskNodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskNodeView.swift; sourceTree = "<group>"; };
+		845A45532EFF4643007D0A6D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		845A45542EFF4643007D0A6D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		845A45552EFF4643007D0A6D /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		845A45562EFF4643007D0A6D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		845A45572EFF4643007D0A6D /* StatCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatCardView.swift; sourceTree = "<group>"; };
+		845A45582EFF4643007D0A6D /* To_do_AppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = To_do_AppApp.swift; sourceTree = "<group>"; };
+		845A45592EFF4643007D0A6D /* TodoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoItem.swift; sourceTree = "<group>"; };
+		845A455A2EFF4643007D0A6D /* TodoRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRowView.swift; sourceTree = "<group>"; };
+		845A455B2EFF4643007D0A6D /* TodoViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoViewModel.swift; sourceTree = "<group>"; };
+		845A455C2EFF4643007D0A6D /* TypeAliases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TypeAliases.swift; sourceTree = "<group>"; };
+		84F6BAEF2EF0C48F00443915 /* atlas.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = atlas.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		84F6BAF12EF0C48F00443915 /* atlas */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "atlas";
+			path = atlas;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -34,9 +101,99 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		845A453B2EFF4643007D0A6D /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				845A45352EFF4643007D0A6D /* Goal.swift */,
+				845A45362EFF4643007D0A6D /* Milestone.swift */,
+				845A45372EFF4643007D0A6D /* Task.swift */,
+				845A45382EFF4643007D0A6D /* Topic.swift */,
+				845A45392EFF4643007D0A6D /* User.swift */,
+				845A453A2EFF4643007D0A6D /* UserFact.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		845A45412EFF4643007D0A6D /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				845A453C2EFF4643007D0A6D /* AIService.swift */,
+				845A453D2EFF4643007D0A6D /* FactExtractionService.swift */,
+				845A453E2EFF4643007D0A6D /* GoalsSupabaseService.swift */,
+				845A453F2EFF4643007D0A6D /* SpeechRecognitionService.swift */,
+				845A45402EFF4643007D0A6D /* SupabaseService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		845A45432EFF4643007D0A6D /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				845A45422EFF4643007D0A6D /* Theme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		845A45462EFF4643007D0A6D /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				845A45442EFF4643007D0A6D /* AuthViewModel.swift */,
+				845A45452EFF4643007D0A6D /* GoalViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		845A45492EFF4643007D0A6D /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				845A45472EFF4643007D0A6D /* LoginView.swift */,
+				845A45482EFF4643007D0A6D /* SignUpView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		845A45522EFF4643007D0A6D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				845A45492EFF4643007D0A6D /* Auth */,
+				845A454A2EFF4643007D0A6D /* AIChatView.swift */,
+				845A454B2EFF4643007D0A6D /* AllTasksView.swift */,
+				845A454C2EFF4643007D0A6D /* GoalDetailView.swift */,
+				845A454D2EFF4643007D0A6D /* GoalDetailView.swift.backup */,
+				845A454E2EFF4643007D0A6D /* GoalsListView.swift */,
+				845A454F2EFF4643007D0A6D /* SettingsView.swift */,
+				845A45502EFF4643007D0A6D /* SplashView.swift */,
+				845A45512EFF4643007D0A6D /* TaskNodeView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		845A455D2EFF4643007D0A6D /* atlas */ = {
+			isa = PBXGroup;
+			children = (
+				845A453B2EFF4643007D0A6D /* Models */,
+				845A45412EFF4643007D0A6D /* Services */,
+				845A45432EFF4643007D0A6D /* Theme */,
+				845A45462EFF4643007D0A6D /* ViewModels */,
+				845A45522EFF4643007D0A6D /* Views */,
+				845A45532EFF4643007D0A6D /* Assets.xcassets */,
+				845A45542EFF4643007D0A6D /* ContentView.swift */,
+				845A45552EFF4643007D0A6D /* DashboardView.swift */,
+				845A45562EFF4643007D0A6D /* Info.plist */,
+				845A45572EFF4643007D0A6D /* StatCardView.swift */,
+				845A45582EFF4643007D0A6D /* To_do_AppApp.swift */,
+				845A45592EFF4643007D0A6D /* TodoItem.swift */,
+				845A455A2EFF4643007D0A6D /* TodoRowView.swift */,
+				845A455B2EFF4643007D0A6D /* TodoViewModel.swift */,
+				845A455C2EFF4643007D0A6D /* TypeAliases.swift */,
+			);
+			path = atlas;
+			sourceTree = "<group>";
+		};
 		84F6BAE62EF0C48F00443915 = {
 			isa = PBXGroup;
 			children = (
+				845A455D2EFF4643007D0A6D /* atlas */,
 				84F6BAF12EF0C48F00443915 /* atlas */,
 				84F6BAF02EF0C48F00443915 /* Products */,
 			);
@@ -68,11 +225,11 @@
 			fileSystemSynchronizedGroups = (
 				84F6BAF12EF0C48F00443915 /* atlas */,
 			);
-			name = "atlas";
+			name = atlas;
 			packageProductDependencies = (
 				84A415D32EF1A63000266A6A /* Supabase */,
 			);
-			productName = "atlas";
+			productName = atlas;
 			productReference = 84F6BAEF2EF0C48F00443915 /* atlas.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -118,6 +275,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				845A455E2EFF4643007D0A6D /* Assets.xcassets in Resources */,
+				845A455F2EFF4643007D0A6D /* GoalDetailView.swift.backup in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -128,6 +287,37 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				845A45612EFF4643007D0A6D /* FactExtractionService.swift in Sources */,
+				845A45622EFF4643007D0A6D /* GoalsListView.swift in Sources */,
+				845A45632EFF4643007D0A6D /* GoalViewModel.swift in Sources */,
+				845A45642EFF4643007D0A6D /* Theme.swift in Sources */,
+				845A45652EFF4643007D0A6D /* UserFact.swift in Sources */,
+				845A45662EFF4643007D0A6D /* StatCardView.swift in Sources */,
+				845A45672EFF4643007D0A6D /* SupabaseService.swift in Sources */,
+				845A45682EFF4643007D0A6D /* SplashView.swift in Sources */,
+				845A45692EFF4643007D0A6D /* Task.swift in Sources */,
+				845A456A2EFF4643007D0A6D /* TypeAliases.swift in Sources */,
+				845A456B2EFF4643007D0A6D /* GoalsSupabaseService.swift in Sources */,
+				845A456C2EFF4643007D0A6D /* Topic.swift in Sources */,
+				845A456D2EFF4643007D0A6D /* ContentView.swift in Sources */,
+				845A456E2EFF4643007D0A6D /* SpeechRecognitionService.swift in Sources */,
+				845A456F2EFF4643007D0A6D /* User.swift in Sources */,
+				845A45702EFF4643007D0A6D /* GoalDetailView.swift in Sources */,
+				845A45712EFF4643007D0A6D /* SettingsView.swift in Sources */,
+				845A45722EFF4643007D0A6D /* DashboardView.swift in Sources */,
+				845A45732EFF4643007D0A6D /* TodoRowView.swift in Sources */,
+				845A45742EFF4643007D0A6D /* SignUpView.swift in Sources */,
+				845A45752EFF4643007D0A6D /* Milestone.swift in Sources */,
+				845A45762EFF4643007D0A6D /* To_do_AppApp.swift in Sources */,
+				845A45772EFF4643007D0A6D /* TaskNodeView.swift in Sources */,
+				845A45782EFF4643007D0A6D /* AuthViewModel.swift in Sources */,
+				845A45792EFF4643007D0A6D /* AIChatView.swift in Sources */,
+				845A457A2EFF4643007D0A6D /* LoginView.swift in Sources */,
+				845A457B2EFF4643007D0A6D /* TodoViewModel.swift in Sources */,
+				845A457C2EFF4643007D0A6D /* AIService.swift in Sources */,
+				845A457D2EFF4643007D0A6D /* TodoItem.swift in Sources */,
+				845A457E2EFF4643007D0A6D /* Goal.swift in Sources */,
+				845A457F2EFF4643007D0A6D /* AllTasksView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,6 +454,7 @@
 				DEVELOPMENT_TEAM = FUR8AABK27;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to record voice messages for AI chat";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -298,6 +489,7 @@
 				DEVELOPMENT_TEAM = FUR8AABK27;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "We need access to your microphone to record voice messages for AI chat";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

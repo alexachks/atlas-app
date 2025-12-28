@@ -116,7 +116,7 @@ struct SignUpView: View {
 
                     // Sign Up Button
                     Button {
-                        _Concurrency.Task { @MainActor in
+                        BackgroundTask { @MainActor in
                             await authViewModel.signUp(
                                 email: email,
                                 password: password,

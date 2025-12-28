@@ -27,9 +27,14 @@ struct ContentView: View {
                     Label("Settings", systemImage: "gearshape")
                 }
         }
+        .onAppear {
+            // Set goalViewModel reference for AIService
+            AIService.shared.goalViewModel = viewModel
+        }
     }
 }
 
 #Preview {
     ContentView()
+        .environmentObject(AuthViewModel())
 }

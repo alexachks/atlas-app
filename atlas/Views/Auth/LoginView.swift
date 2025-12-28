@@ -84,7 +84,7 @@ struct LoginView: View {
 
                     // Login Button
                     Button {
-                        _Concurrency.Task { @MainActor in
+                        BackgroundTask { @MainActor in
                             await authViewModel.signIn(email: email, password: password)
                         }
                     } label: {

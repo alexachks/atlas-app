@@ -107,7 +107,7 @@ struct SettingsView: View {
             .alert("Sign Out?", isPresented: $showingSignOutAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign Out", role: .destructive) {
-                    _Concurrency.Task {
+                    BackgroundTask {
                         await authViewModel.signOut()
                     }
                 }
@@ -118,11 +118,31 @@ struct SettingsView: View {
     }
 
     private var totalTasks: Int {
-        viewModel.goals.reduce(0) { $0 + $1.totalTasksCount }
+        var total = 0
+        for goal in viewModel.goals {
+            if let milestones = viewModel.milestonesByGoal[goal.id] {
+                for milestone in milestones {
+                    if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                        total += tasks.count
+                    }
+                }
+            }
+        }
+        return total
     }
 
     private var completedTasks: Int {
-        viewModel.goals.reduce(0) { $0 + $1.completedTasksCount }
+        var completed = 0
+        for goal in viewModel.goals {
+            if let milestones = viewModel.milestonesByGoal[goal.id] {
+                for milestone in milestones {
+                    if let tasks = viewModel.tasksByMilestone[milestone.id] {
+                        completed += tasks.filter { $0.isCompleted }.count
+                    }
+                }
+            }
+        }
+        return completed
     }
 
     private func statsRow(title: String, value: String, icon: String, color: Color) -> some View {
@@ -142,11 +162,31 @@ struct SettingsView: View {
     }
 
     private func clearAllData() {
-        viewModel.goals = []
-        UserDefaults.standard.removeObject(forKey: "goals")
+        BackgroundTask {
+            // Delete all goals from Supabase (cascading delete will remove milestones and tasks)
+            for goal in viewModel.goals {
+                await viewModel.deleteGoal(goal)
+            }
+        }
     }
 }
 
 #Preview {
-    SettingsView(viewModel: GoalViewModel())
+    SettingsViewPreview()
+}
+
+private struct SettingsViewPreview: View {
+    @StateObject private var authViewModel = AuthViewModel()
+    @StateObject private var goalViewModel = GoalViewModel()
+
+    var body: some View {
+        if authViewModel.isInitializing {
+            SplashView()
+        } else if authViewModel.isAuthenticated {
+            SettingsView(viewModel: goalViewModel)
+                .environmentObject(authViewModel)
+        } else {
+            LoginView(authViewModel: authViewModel)
+        }
+    }
 }
