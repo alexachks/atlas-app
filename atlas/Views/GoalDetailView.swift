@@ -20,7 +20,6 @@ struct GoalDetailView: View {
     @State private var newTaskDescription = ""
 
     // Task detail modal
-    @State private var showingTaskDetail = false
     @State private var selectedTask: Task?
 
     private var currentGoal: Goal? {
@@ -168,20 +167,37 @@ struct GoalDetailView: View {
         .sheet(isPresented: $showingEditGoal) {
             editGoalSheet
         }
-        .sheet(isPresented: $showingTaskDetail) {
+        .sheet(item: $selectedTask) { task in
             if let currentGoal = currentGoal,
-               let selectedTask = selectedTask,
-               let milestone = viewModel.milestonesByGoal[currentGoal.id]?.first(where: { $0.id == selectedTask.milestoneId }) {
+               let milestone = findMilestone(for: task, in: currentGoal) {
                 TaskDetailView(
-                    task: selectedTask,
+                    taskId: task.id,
                     goal: currentGoal,
                     milestone: milestone,
                     viewModel: viewModel
                 )
+
+
             } else {
-                Text("Error loading task details")
-                    .font(.headline)
-                    .padding()
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Loading task details...")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground))
+                .task {
+                    // Wait for milestone to load
+                    if let currentGoal = currentGoal {
+                        var attempts = 0
+                        while attempts < 6 && findMilestone(for: task, in: currentGoal) == nil {
+                            try? await _Concurrency.Task.sleep(nanoseconds: 500_000_000)
+                            attempts += 1
+                        }
+                    }
+                }
             }
         }
     }
@@ -317,7 +333,6 @@ struct GoalDetailView: View {
                             },
                             onTap: {
                                 selectedTask = task
-                                showingTaskDetail = true
                             }
                         )
                     }
@@ -561,6 +576,16 @@ struct GoalDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Data Loading
+
+    private func findMilestone(for task: Task, in goal: Goal) -> Milestone? {
+        guard let milestones = viewModel.milestonesByGoal[goal.id] else {
+            return nil
+        }
+
+        return milestones.first(where: { $0.id == task.milestoneId })
     }
 }
 

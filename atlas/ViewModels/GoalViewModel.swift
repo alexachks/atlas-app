@@ -191,10 +191,10 @@ final class GoalViewModel: ObservableObject {
 
     // MARK: - Goal CRUD
 
-    func addGoal(title: String, description: String? = nil, deadline: Date? = nil) async {
+    func addGoal(title: String, description: String? = nil, deadline: Date? = nil) async -> Goal? {
         guard let userId = SupabaseService.shared.currentUserId else {
             print("❌ No user logged in")
-            return
+            return nil
         }
 
         let newGoal = Goal(
@@ -209,8 +209,10 @@ final class GoalViewModel: ObservableObject {
             await MainActor.run {
                 self.goals.insert(created, at: 0)
             }
+            return created
         } catch {
             print("❌ Failed to create goal: \(error)")
+            return nil
         }
     }
 
@@ -253,7 +255,7 @@ final class GoalViewModel: ObservableObject {
 
     // MARK: - Milestone CRUD (ранее Topic)
 
-    func addMilestone(to goalId: UUID, title: String, description: String = "") async {
+    func addMilestone(to goalId: UUID, title: String, description: String = "") async -> Milestone? {
         let currentMilestones = milestonesByGoal[goalId] ?? []
         let orderIndex = currentMilestones.count
 
@@ -273,8 +275,10 @@ final class GoalViewModel: ObservableObject {
                     self.milestonesByGoal[goalId] = [created]
                 }
             }
+            return created
         } catch {
             print("❌ Failed to create milestone: \(error)")
+            return nil
         }
     }
 
@@ -301,7 +305,7 @@ final class GoalViewModel: ObservableObject {
 
     // MARK: - Task CRUD
 
-    func addTask(to milestoneId: UUID, title: String, description: String = "", dependsOn: [UUID] = []) async {
+    func addTask(to milestoneId: UUID, title: String, description: String = "", dependsOn: [UUID] = []) async -> Task? {
         let currentTasks = tasksByMilestone[milestoneId] ?? []
         let orderIndex = currentTasks.count
 
@@ -322,8 +326,10 @@ final class GoalViewModel: ObservableObject {
                     self.tasksByMilestone[milestoneId] = [created]
                 }
             }
+            return created
         } catch {
             print("❌ Failed to create task: \(error)")
+            return nil
         }
     }
 
@@ -393,11 +399,11 @@ final class GoalViewModel: ObservableObject {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .short
-        dateFormatter.locale = Locale(identifier: "ru_RU")
+        dateFormatter.locale = Locale(identifier: "en_US")
 
         let completionMessage = """
-        ✅ Задача выполнена: \(task.title)
-        Дата завершения: \(task.completedAt.map { dateFormatter.string(from: $0) } ?? "сейчас")
+        ✅ Task completed: \(task.title)
+        Completion date: \(task.completedAt.map { dateFormatter.string(from: $0) } ?? "now")
         """
 
         print("📋 Sending task completion card to AI chat")

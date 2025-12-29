@@ -78,6 +78,10 @@ struct AIChatView: View {
                 .id(aiService.messages.isEmpty ? "empty" : "messages")
             }
             .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                // Scroll to last message on chat open
+                scrollToBottom(proxy: proxy)
+            }
             .onChange(of: aiService.messages.count) { newCount in
                 handleMessagesCountChange(newCount, proxy: proxy)
             }
@@ -137,11 +141,16 @@ struct AIChatView: View {
 
     @ViewBuilder
     private var loadingIndicators: some View {
-        if aiService.isLoading {
+        // Show tool processing indicator if working with tools
+        if aiService.isProcessingTool {
+            toolProcessingIndicator
+        }
+        // Otherwise show thinking indicator if loading
+        else if aiService.isLoading {
             if aiService.streamingContent.isEmpty {
                 HStack {
                     ProgressView()
-                    Text("AI is thinking...")
+                    Text("thinking...")
                         .foregroundColor(.secondary)
                 }
                 .padding()
@@ -149,10 +158,6 @@ struct AIChatView: View {
                 StreamingMessageBubbleView(content: aiService.streamingContent)
                     .id("streaming")
             }
-        }
-
-        if aiService.isProcessingTool {
-            toolProcessingIndicator
         }
     }
 
@@ -328,6 +333,17 @@ struct AIChatView: View {
     }
 
     // MARK: - Event Handlers
+
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        // Delay to ensure messages are loaded
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let lastMessage = aiService.messages.last {
+                withAnimation {
+                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                }
+            }
+        }
+    }
 
     private func handleMessagesCountChange(_ newCount: Int, proxy: ScrollViewProxy) {
         if let lastMessage = aiService.messages.last {
@@ -508,7 +524,7 @@ struct MessageBubbleView: View {
 
     // Check if this is a task completion card
     private var isTaskCompletionCard: Bool {
-        message.role == "user" && message.content.hasPrefix("✅ Задача выполнена:")
+        message.role == "user" && message.content.hasPrefix("✅ Task completed:")
     }
 
     var body: some View {
@@ -530,7 +546,17 @@ struct MessageBubbleView: View {
                         .cornerRadius(16)
                 }
 
-                // Show goal card if attached
+                // Show attached entities (goals, milestones, tasks)
+                ForEach(Array(message.attachedEntities.enumerated()), id: \.offset) { index, entity in
+                    renderAttachedEntity(entity)
+                }
+                .onAppear {
+                    if !message.attachedEntities.isEmpty {
+                        print("📎 [MessageBubbleView] Message has \(message.attachedEntities.count) attached entities")
+                    }
+                }
+
+                // Show legacy goal card if attached (backwards compatibility)
                 if let goalId = message.attachedGoalId,
                    let goal = goalViewModel.goals.first(where: { $0.id == goalId }) {
                     ChatGoalCardView(goal: goal, goalViewModel: goalViewModel)
@@ -546,6 +572,76 @@ struct MessageBubbleView: View {
             }
         }
         .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private func renderAttachedEntity(_ entity: AttachedEntity) -> some View {
+        switch entity {
+        case .goal(let goalId):
+            if let goal = goalViewModel.goals.first(where: { $0.id == goalId }) {
+                ChatGoalCardView(goal: goal, goalViewModel: goalViewModel)
+            } else {
+                // Debug: Goal not found
+                Text("⚠️ Goal not found")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .onAppear {
+                        print("⚠️ [AIChatView] Goal \(goalId) not found. Available goals: \(goalViewModel.goals.map { $0.title })")
+                    }
+            }
+
+        case .milestone(let milestoneId):
+            // Find milestone and its goal
+            if let (milestone, goal) = findMilestoneAndGoal(milestoneId: milestoneId) {
+                ChatMilestoneCardView(milestone: milestone, goal: goal, goalViewModel: goalViewModel)
+            } else {
+                // Debug: Milestone not found
+                Text("⚠️ Milestone not found")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .onAppear {
+                        print("⚠️ [AIChatView] Milestone \(milestoneId) not found")
+                    }
+            }
+
+        case .task(let taskId):
+            // Find task, milestone, and goal
+            if let (task, milestone, goal) = findTaskMilestoneAndGoal(taskId: taskId) {
+                ChatTaskCardView(task: task, milestone: milestone, goal: goal, goalViewModel: goalViewModel)
+            } else {
+                // Debug: Task not found
+                Text("⚠️ Task not found")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .onAppear {
+                        print("⚠️ [AIChatView] Task \(taskId) not found")
+                    }
+            }
+        }
+    }
+
+    private func findMilestoneAndGoal(milestoneId: UUID) -> (Milestone, Goal)? {
+        for goal in goalViewModel.goals {
+            if let milestones = goalViewModel.milestonesByGoal[goal.id],
+               let milestone = milestones.first(where: { $0.id == milestoneId }) {
+                return (milestone, goal)
+            }
+        }
+        return nil
+    }
+
+    private func findTaskMilestoneAndGoal(taskId: UUID) -> (Task, Milestone, Goal)? {
+        for goal in goalViewModel.goals {
+            if let milestones = goalViewModel.milestonesByGoal[goal.id] {
+                for milestone in milestones {
+                    if let tasks = goalViewModel.tasksByMilestone[milestone.id],
+                       let task = tasks.first(where: { $0.id == taskId }) {
+                        return (task, milestone, goal)
+                    }
+                }
+            }
+        }
+        return nil
     }
 }
 
@@ -1038,6 +1134,186 @@ struct ChatGoalCardView: View {
     }
 }
 
+// MARK: - Milestone Card
+
+struct ChatMilestoneCardView: View {
+    let milestone: Milestone
+    let goal: Goal
+    let goalViewModel: GoalViewModel
+
+    private var taskStats: (completed: Int, total: Int) {
+        guard let tasks = goalViewModel.tasksByMilestone[milestone.id] else { return (0, 0) }
+        let completed = tasks.filter { $0.isCompleted }.count
+        return (completed, tasks.count)
+    }
+
+    var body: some View {
+        NavigationLink(destination: GoalDetailView(goal: goal, viewModel: goalViewModel)) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Header with icon and title
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.purple.opacity(0.1))
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: "flag.fill")
+                            .font(.title3)
+                            .foregroundStyle(.purple)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Milestone")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text(milestone.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+
+                        if !milestone.description.isEmpty {
+                            Text(milestone.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                // Task stats
+                let stats = taskStats
+                if stats.total > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(stats.completed == stats.total ? .green : .blue)
+
+                        Text("\(stats.completed)/\(stats.total) tasks completed")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(16)
+            .background(Color.purple.opacity(0.05))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.purple.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Task Card
+
+struct ChatTaskCardView: View {
+    let task: Task
+    let milestone: Milestone
+    let goal: Goal
+    let goalViewModel: GoalViewModel
+
+    @State private var showingTaskDetail = false
+
+    var body: some View {
+        Button(action: {
+            showingTaskDetail = true
+        }) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Header with icon and title
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(task.isCompleted ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(task.isCompleted ? .green : .orange)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Task")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text(task.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+
+                        if !task.description.isEmpty {
+                            Text(task.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                // Task metadata
+                HStack(spacing: 12) {
+                    // Milestone badge
+                    HStack(spacing: 4) {
+                        Image(systemName: "flag.fill")
+                            .font(.caption2)
+                        Text(milestone.title)
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.secondary)
+
+                    if let estimatedMinutes = task.estimatedMinutes {
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.caption2)
+                            Text("\(estimatedMinutes) min")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if task.isCompleted {
+                        Text("Completed")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                            .fontWeight(.medium)
+                    }
+                }
+            }
+            .padding(16)
+            .background(task.isCompleted ? Color.green.opacity(0.05) : Color.orange.opacity(0.05))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(task.isCompleted ? Color.green.opacity(0.2) : Color.orange.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingTaskDetail) {
+            TaskDetailView(
+                taskId: task.id,
+                goal: goal,
+                milestone: milestone,
+                viewModel: goalViewModel
+            )
+        }
+    }
+}
+
 struct ExampleGoalButton: View {
     let text: String
     @Binding var messageText: String
@@ -1068,14 +1344,14 @@ struct TaskCompletionCardView: View {
     // Parse task title from message
     private var taskTitle: String {
         let content = message.content
-        if let range = content.range(of: "✅ Задача выполнена: ") {
+        if let range = content.range(of: "✅ Task completed: ") {
             let afterPrefix = content[range.upperBound...]
             if let lineBreak = afterPrefix.firstIndex(of: "\n") {
                 return String(afterPrefix[..<lineBreak])
             }
             return String(afterPrefix)
         }
-        return "Задача"
+        return "Task"
     }
 
     var body: some View {
@@ -1093,7 +1369,7 @@ struct TaskCompletionCardView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Задача выполнена")
+                    Text("Task Completed")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

@@ -14,17 +14,17 @@ struct ContentView: View {
         TabView {
             GoalsListView(viewModel: viewModel)
                 .tabItem {
-                    Label("Goals", systemImage: "target")
+                    Label("Goals", systemImage: "trophy.fill")
                 }
 
             AllTasksView(viewModel: viewModel)
                 .tabItem {
-                    Label("Tasks", systemImage: "list.bullet")
+                    Label("Tasks", systemImage: "square.stack.3d.up.fill")
                 }
 
             SettingsView(viewModel: viewModel)
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Label("Profile", systemImage: "person.circle")
                 }
         }
         .onAppear {

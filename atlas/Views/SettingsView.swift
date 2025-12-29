@@ -16,63 +16,58 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Profile Header
                 Section {
-                    statsRow(
-                        title: "Total Goals",
-                        value: "\(viewModel.goals.count)",
-                        icon: "target",
-                        color: .blue
-                    )
+                    if let user = authViewModel.currentUser {
+                        HStack(spacing: 16) {
+                            // Avatar Circle
+                            ZStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(0.1))
+                                    .frame(width: 60, height: 60)
 
-                    statsRow(
-                        title: "Total Tasks",
-                        value: "\(totalTasks)",
-                        icon: "list.bullet",
-                        color: .green
-                    )
+                                Text(user.fullName.prefix(1).uppercased())
+                                    .font(.title)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.blue)
+                            }
 
-                    statsRow(
-                        title: "Completed Tasks",
-                        value: "\(completedTasks)",
-                        icon: "checkmark.circle.fill",
-                        color: .orange
-                    )
-                } header: {
-                    Text("Statistics")
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(user.fullName)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+
+                                Text(user.email)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                    }
                 }
 
+                // Account Actions
                 Section {
+                    Button(role: .destructive) {
+                        showingSignOutAlert = true
+                    } label: {
+                        Label("Sign Out", systemImage: "arrow.right.square")
+                    }
+
                     Button(role: .destructive) {
                         showingClearDataAlert = true
                     } label: {
                         Label("Clear All Data", systemImage: "trash")
                     }
                 } header: {
-                    Text("Data")
-                } footer: {
-                    Text("This will delete all goals and tasks. This action cannot be undone.")
-                }
-
-                Section {
-                    if let user = authViewModel.currentUser {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(user.fullName)
-                                .font(.headline)
-                            Text(user.email)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    Button(role: .destructive) {
-                        showingSignOutAlert = true
-                    } label: {
-                        Label("Sign Out", systemImage: "arrow.right.square")
-                    }
-                } header: {
                     Text("Account")
+                } footer: {
+                    Text("Clear all data will permanently delete all your goals, milestones, and tasks.")
                 }
 
+                // About App
                 Section {
                     HStack {
                         Text("Version")
@@ -95,7 +90,7 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Settings")
+            .navigationTitle("Profile")
             .alert("Clear All Data?", isPresented: $showingClearDataAlert) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete All", role: .destructive) {
@@ -114,50 +109,6 @@ struct SettingsView: View {
             } message: {
                 Text("Are you sure you want to sign out?")
             }
-        }
-    }
-
-    private var totalTasks: Int {
-        var total = 0
-        for goal in viewModel.goals {
-            if let milestones = viewModel.milestonesByGoal[goal.id] {
-                for milestone in milestones {
-                    if let tasks = viewModel.tasksByMilestone[milestone.id] {
-                        total += tasks.count
-                    }
-                }
-            }
-        }
-        return total
-    }
-
-    private var completedTasks: Int {
-        var completed = 0
-        for goal in viewModel.goals {
-            if let milestones = viewModel.milestonesByGoal[goal.id] {
-                for milestone in milestones {
-                    if let tasks = viewModel.tasksByMilestone[milestone.id] {
-                        completed += tasks.filter { $0.isCompleted }.count
-                    }
-                }
-            }
-        }
-        return completed
-    }
-
-    private func statsRow(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .frame(width: 24)
-
-            Text(title)
-
-            Spacer()
-
-            Text(value)
-                .foregroundStyle(.secondary)
-                .fontWeight(.semibold)
         }
     }
 

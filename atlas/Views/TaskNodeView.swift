@@ -49,18 +49,12 @@ struct TaskNodeView: View {
                 .foregroundStyle(textColor)
                 .strikethrough(task.isCompleted, color: .secondary)
                 .multilineTextAlignment(.leading)
-                .onTapGesture {
-                    onTap()
-                }
 
             if !task.description.isEmpty {
                 Text(task.description)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                    .onTapGesture {
-                        onTap()
-                    }
             }
 
             if let minutes = task.estimatedMinutes {
@@ -71,9 +65,6 @@ struct TaskNodeView: View {
                         .font(.caption)
                 }
                 .foregroundStyle(.secondary)
-                .onTapGesture {
-                    onTap()
-                }
             }
         }
         .contentShape(Rectangle())

@@ -11,27 +11,75 @@ internal import Auth
 internal import PostgREST
 import Supabase
 
+// Enum to represent different types of attached entities
+enum AttachedEntity: Codable, Equatable {
+    case goal(UUID)
+    case milestone(UUID)
+    case task(UUID)
+
+    enum CodingKeys: String, CodingKey {
+        case type, id
+    }
+
+    enum EntityType: String, Codable {
+        case goal, milestone, task
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .goal(let id):
+            try container.encode(EntityType.goal, forKey: .type)
+            try container.encode(id, forKey: .id)
+        case .milestone(let id):
+            try container.encode(EntityType.milestone, forKey: .type)
+            try container.encode(id, forKey: .id)
+        case .task(let id):
+            try container.encode(EntityType.task, forKey: .type)
+            try container.encode(id, forKey: .id)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(EntityType.self, forKey: .type)
+        let id = try container.decode(UUID.self, forKey: .id)
+
+        switch type {
+        case .goal:
+            self = .goal(id)
+        case .milestone:
+            self = .milestone(id)
+        case .task:
+            self = .task(id)
+        }
+    }
+}
+
 struct AIMessage: Identifiable, Codable {
     let id: UUID
     let role: String // "user" or "assistant"
     let content: String
     let timestamp: Date
-    let attachedGoalId: UUID? // If this message created a goal
+    let attachedGoalId: UUID? // Deprecated - kept for backwards compatibility
     var factsExtracted: Bool // Whether facts have been extracted from this message
+    var attachedEntities: [AttachedEntity] // New: can attach multiple entities (goals, milestones, tasks)
 
-    init(id: UUID = UUID(), role: String, content: String, timestamp: Date = Date(), attachedGoalId: UUID? = nil, factsExtracted: Bool = false) {
+    init(id: UUID = UUID(), role: String, content: String, timestamp: Date = Date(), attachedGoalId: UUID? = nil, factsExtracted: Bool = false, attachedEntities: [AttachedEntity] = []) {
         self.id = id
         self.role = role
         self.content = content
         self.timestamp = timestamp
         self.attachedGoalId = attachedGoalId
         self.factsExtracted = factsExtracted
+        self.attachedEntities = attachedEntities
     }
 
     enum CodingKeys: String, CodingKey {
         case id, role, content, timestamp
         case attachedGoalId = "attached_goal_id"
         case factsExtracted = "facts_extracted"
+        case attachedEntities = "attached_entities"
     }
 }
 
@@ -198,6 +246,9 @@ final class AIService: ObservableObject {
     private var recentToolResults: [ToolExecutionResult] = []
     private let maxToolResults = 5
 
+    // ✅ NEW: Pending entities to attach to next assistant message
+    private var pendingAttachedEntities: [AttachedEntity] = []
+
     private init() {
         let startTime = CFAbsoluteTimeGetCurrent()
         print("🚀 [AIService] init() started")
@@ -272,20 +323,20 @@ After gathering context:
 ### 3. Task Completion Flow (CRITICAL)
 When user completes a task, you'll receive a completion card like this:
 ```
-✅ Задача выполнена: [Task Title]
-Дата завершения: [Date]
+✅ Task completed: [Task Title]
+Completion date: [Date]
 ```
 
 **Your response must:**
-1. Celebrate the completion: "Отлично! Поздравляю с выполнением задачи!"
-2. Ask for detailed feedback: "Расскажи подробнее, как прошло выполнение? С какими трудностями столкнулся? Что нового узнал?"
+1. Celebrate the completion: "Awesome! Congrats on completing that task! 🎉"
+2. Ask for detailed feedback: "Tell me more - how did it go? What challenges did you face? What did you learn?"
 3. Wait for user's response before creating next tasks
 4. Adapt the plan based on feedback (use `edit_milestone`, `create_task`, `edit_task`)
 5. Ask follow-up questions if feedback is vague
 
 **Example:**
-User: ✅ Задача выполнена: Изучить основы Python
-You: Отлично! Поздравляю с завершением первой задачи! 🎉 Расскажи, как прошло изучение? Какие темы показались сложными? Уже пробовал писать какой-то код?
+User: ✅ Task completed: Learn Python basics
+You: Awesome! Congrats on finishing the first task! 🎉 Tell me, how did the learning go? Which topics seemed difficult? Have you tried writing any code yet?
 
 ### 4. Tools You Have
 
@@ -975,10 +1026,12 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
 
             // Create assistant text message if there's content
             if !accumulatedContent.isEmpty {
+                // ✅ NEW: Attach pending entities to assistant message
                 let assistantMessage = AIMessage(
                     id: assistantMessageId,
                     role: "assistant",
-                    content: accumulatedContent
+                    content: accumulatedContent,
+                    attachedEntities: pendingAttachedEntities
                 )
 
                 // ✅ LOG ASSISTANT MESSAGE (FINAL)
@@ -986,20 +1039,35 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
                 print("🤖 ASSISTANT MESSAGE (FINAL)")
                 print(String(repeating: "=", count: 80))
                 print(accumulatedContent)
+                if !pendingAttachedEntities.isEmpty {
+                    print("📎 Attached entities: \(pendingAttachedEntities.count)")
+                }
                 print(String(repeating: "=", count: 80) + "\n")
 
-                await MainActor.run {
-                    self.messages.append(assistantMessage)
-                    self.saveMessagesToCache()
-                    self.streamingContent = ""
+                // Check if this message ID already exists (prevent duplicates)
+                let messageAlreadyExists = await MainActor.run {
+                    self.messages.contains(where: { $0.id == assistantMessageId })
                 }
 
-                await saveMessageToDatabase(assistantMessage)
+                if !messageAlreadyExists {
+                    await MainActor.run {
+                        self.messages.append(assistantMessage)
+                        self.saveMessagesToCache()
+                        self.streamingContent = ""
+                        // Clear pending entities after attaching
+                        self.pendingAttachedEntities = []
+                    }
+
+                    await saveMessageToDatabase(assistantMessage)
+                } else {
+                    print("⚠️ [AIService] Message \(assistantMessageId) already exists, skipping save to prevent duplicate")
+                }
             }
 
             // Process all tool uses
             if !toolUses.isEmpty {
                 var toolResults: [[String: Any]] = []
+                var collectedEntities: [AttachedEntity] = [] // ✅ NEW: Collect entities from all tools
 
                 for (index, toolUse) in toolUses.enumerated() {
                     guard let toolName = toolUse["name"] as? String else {
@@ -1025,6 +1093,32 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
 
                         do {
                             let resultContent = try await handleToolUse(toolName: toolName, input: input)
+
+                            // ✅ NEW: Parse JSON response to extract entity info
+                            if let resultData = resultContent.data(using: .utf8),
+                               let resultJson = try? JSONSerialization.jsonObject(with: resultData) as? [String: Any] {
+                                print("📦 [AIService] Tool result JSON: \(resultJson)")
+
+                                if let entityType = resultJson["entity_type"] as? String,
+                                   let entityIdString = resultJson["entity_id"] as? String,
+                                   let entityId = UUID(uuidString: entityIdString) {
+
+                                    print("✅ [AIService] Extracted entity: type=\(entityType), id=\(entityId)")
+
+                                    switch entityType {
+                                    case "goal":
+                                        collectedEntities.append(.goal(entityId))
+                                    case "milestone":
+                                        collectedEntities.append(.milestone(entityId))
+                                    case "task":
+                                        collectedEntities.append(.task(entityId))
+                                    default:
+                                        break
+                                    }
+                                } else {
+                                    print("⚠️ [AIService] No entity info in tool result")
+                                }
+                            }
 
                             // Add success result with actual content
                             toolResults.append([
@@ -1116,7 +1210,8 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
                     assistantMessageId: assistantMessageId,
                     toolUses: toolUses,
                     toolResults: toolResults,
-                    accumulatedContent: accumulatedContent
+                    accumulatedContent: accumulatedContent,
+                    attachedEntities: collectedEntities // ✅ NEW: Pass collected entities
                 )
 
             } else {
@@ -1155,9 +1250,15 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
         assistantMessageId: UUID,
         toolUses: [[String: Any]],
         toolResults: [[String: Any]],
-        accumulatedContent: String
+        accumulatedContent: String,
+        attachedEntities: [AttachedEntity] = [] // ✅ NEW: Entities to attach
     ) async throws {
         print("🔄 [AIService] Continuing conversation with proper tool_result messages...")
+        print("📎 [AIService] Received \(attachedEntities.count) entities to attach: \(attachedEntities)")
+
+        // ✅ NEW: Store entities to attach to next assistant message
+        pendingAttachedEntities = attachedEntities
+        print("📎 [AIService] pendingAttachedEntities set to: \(pendingAttachedEntities)")
 
         // ✅ PROPER ANTHROPIC PATTERN:
         // 1. User message (already in self.messages)
@@ -1232,13 +1333,17 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
             let deadlineString = input["deadline"] as? String
             let deadline = deadlineString.flatMap { ISO8601DateFormatter().date(from: $0) }
 
-            await goalViewModel.addGoal(title: title, description: description, deadline: deadline)
-
-            // Return the goal_id of the newly created goal
-            guard let createdGoal = goalViewModel.goals.first else {
-                return "Goal created successfully"
+            guard let createdGoal = await goalViewModel.addGoal(title: title, description: description, deadline: deadline) else {
+                return "{\"message\": \"Failed to create goal\"}"
             }
-            return "Goal created with ID: \(createdGoal.id.uuidString)"
+
+            return """
+            {
+              "message": "Goal '\(title)' created successfully",
+              "entity_type": "goal",
+              "entity_id": "\(createdGoal.id.uuidString)"
+            }
+            """
 
         case "edit_goal":
             guard let goalIdString = input["goal_id"] as? String,
@@ -1256,7 +1361,13 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
             }
 
             await goalViewModel.updateGoal(goal)
-            return "Goal \(goalId.uuidString) updated successfully"
+            return """
+            {
+              "message": "Goal '\(goal.title)' updated successfully",
+              "entity_type": "goal",
+              "entity_id": "\(goalId.uuidString)"
+            }
+            """
 
         case "delete_goal":
             guard let goalIdString = input["goal_id"] as? String,
@@ -1265,8 +1376,13 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
                 throw AIServiceError.invalidResponse
             }
 
+            let goalTitle = goal.title
             await goalViewModel.deleteGoal(goal)
-            return "Goal \(goalId.uuidString) deleted successfully"
+            return """
+            {
+              "message": "Goal '\(goalTitle)' deleted successfully"
+            }
+            """
 
         case "create_milestone":
             guard let goalIdString = input["goal_id"] as? String,
@@ -1277,14 +1393,17 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
             let title = input["title"] as? String ?? ""
             let description = input["description"] as? String ?? ""
 
-            await goalViewModel.addMilestone(to: goalId, title: title, description: description)
-
-            // Return the milestone_id of the newly created milestone
-            guard let milestones = goalViewModel.milestonesByGoal[goalId],
-                  let createdMilestone = milestones.first else {
-                return "Milestone created successfully for goal \(goalId.uuidString)"
+            guard let createdMilestone = await goalViewModel.addMilestone(to: goalId, title: title, description: description) else {
+                return "{\"message\": \"Failed to create milestone\"}"
             }
-            return "Milestone created with ID: \(createdMilestone.id.uuidString) for goal \(goalId.uuidString)"
+
+            return """
+            {
+              "message": "Milestone '\(title)' created successfully",
+              "entity_type": "milestone",
+              "entity_id": "\(createdMilestone.id.uuidString)"
+            }
+            """
 
         case "edit_milestone":
             guard let milestoneIdString = input["milestone_id"] as? String,
@@ -1310,7 +1429,13 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
             if let orderIndex = input["order_index"] as? Int { foundMilestone.orderIndex = orderIndex }
 
             await goalViewModel.updateMilestone(foundMilestone)
-            return "Milestone \(milestoneId.uuidString) updated successfully"
+            return """
+            {
+              "message": "Milestone '\(foundMilestone.title)' updated successfully",
+              "entity_type": "milestone",
+              "entity_id": "\(milestoneId.uuidString)"
+            }
+            """
 
         case "delete_milestone":
             guard let milestoneIdString = input["milestone_id"] as? String,
@@ -1330,8 +1455,13 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
                 throw AIServiceError.invalidResponse
             }
 
+            let milestoneTitle = foundMilestone.title
             await goalViewModel.deleteMilestone(foundMilestone)
-            return "Milestone \(milestoneId.uuidString) deleted successfully"
+            return """
+            {
+              "message": "Milestone '\(milestoneTitle)' deleted successfully"
+            }
+            """
 
         case "create_task":
             guard let milestoneIdString = input["milestone_id"] as? String,
@@ -1344,14 +1474,17 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
             let dependsOnStrings = input["depends_on"] as? [String] ?? []
             let dependsOn = dependsOnStrings.compactMap { UUID(uuidString: $0) }
 
-            await goalViewModel.addTask(to: milestoneId, title: title, description: description, dependsOn: dependsOn)
-
-            // Return the task_id of the newly created task
-            guard let tasks = goalViewModel.tasksByMilestone[milestoneId],
-                  let createdTask = tasks.last else {
-                return "Task created successfully for milestone \(milestoneId.uuidString)"
+            guard let createdTask = await goalViewModel.addTask(to: milestoneId, title: title, description: description, dependsOn: dependsOn) else {
+                return "{\"message\": \"Failed to create task\"}"
             }
-            return "Task created with ID: \(createdTask.id.uuidString) for milestone \(milestoneId.uuidString)"
+
+            return """
+            {
+              "message": "Task '\(title)' created successfully",
+              "entity_type": "task",
+              "entity_id": "\(createdTask.id.uuidString)"
+            }
+            """
 
         case "edit_task":
             guard let taskIdString = input["task_id"] as? String,
@@ -1385,7 +1518,13 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
             }
 
             await goalViewModel.updateTask(foundTask)
-            return "Task \(taskId.uuidString) updated successfully"
+            return """
+            {
+              "message": "Task '\(foundTask.title)' updated successfully",
+              "entity_type": "task",
+              "entity_id": "\(taskId.uuidString)"
+            }
+            """
 
         case "delete_task":
             guard let taskIdString = input["task_id"] as? String,
@@ -1405,8 +1544,13 @@ Remember: You're a coach, not a task generator. Build trust through iteration, n
                 throw AIServiceError.invalidResponse
             }
 
+            let taskTitle = foundTask.title
             await goalViewModel.deleteTask(foundTask)
-            return "Task \(taskId.uuidString) deleted successfully"
+            return """
+            {
+              "message": "Task '\(taskTitle)' deleted successfully"
+            }
+            """
 
         case "view_goal":
             guard let goalIdString = input["goal_id"] as? String,

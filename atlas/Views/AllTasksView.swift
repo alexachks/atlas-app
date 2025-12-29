@@ -11,6 +11,21 @@ struct AllTasksView: View {
     @ObservedObject var viewModel: GoalViewModel
     @State private var showingAIChat = false
     @State private var showingAddTask = false
+    @State private var selectedTaskDetail: TaskDetail?
+
+    struct TaskDetail: Identifiable {
+        let id: UUID
+        let task: Task
+        let goal: Goal
+        let milestoneId: UUID
+
+        init(task: Task, goal: Goal, milestoneId: UUID) {
+            self.id = task.id
+            self.task = task
+            self.goal = goal
+            self.milestoneId = milestoneId
+        }
+    }
 
     private var availableTasks: [(task: Task, goal: Goal, milestoneId: UUID)] {
         var result: [(task: Task, goal: Goal, milestoneId: UUID)] = []
@@ -57,6 +72,13 @@ struct AllTasksView: View {
                                 BackgroundTask {
                                     await viewModel.toggleTask(item.task)
                                 }
+                            },
+                            onTap: {
+                                selectedTaskDetail = TaskDetail(
+                                    task: item.task,
+                                    goal: item.goal,
+                                    milestoneId: item.milestoneId
+                                )
                             }
                         )
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -94,6 +116,26 @@ struct AllTasksView: View {
             .sheet(isPresented: $showingAddTask) {
                 AddTaskSheet(viewModel: viewModel, isPresented: $showingAddTask)
             }
+            .sheet(item: $selectedTaskDetail) { detail in
+                // Milestone MUST exist since we got it from availableTasks
+                if let milestones = viewModel.milestonesByGoal[detail.goal.id],
+                   let milestone = milestones.first(where: { $0.id == detail.milestoneId }) {
+                    TaskDetailView(
+                        taskId: detail.task.id,
+                        goal: detail.goal,
+                        milestone: milestone,
+                        viewModel: viewModel
+                    )
+                } else {
+                    // Fallback - this should never happen
+                    Text("Error: Milestone not found")
+                        .foregroundStyle(.red)
+                        .onAppear {
+                            print("❌ [AllTasksView] CRITICAL: Milestone \(detail.milestoneId) not found for goal \(detail.goal.title)")
+                            print("Available milestones: \(viewModel.milestonesByGoal[detail.goal.id]?.map { $0.title } ?? [])")
+                        }
+                }
+            }
         }
         .transaction { transaction in
             transaction.animation = nil
@@ -125,24 +167,25 @@ struct AvailableTaskRow: View {
     let task: Task
     let goal: Goal
     let onToggle: () -> Void
+    let onTap: () -> Void
 
     @State private var isCompleting = false
 
     var body: some View {
-        Button(action: {
-            let impact = UIImpactFeedbackGenerator(style: .light)
-            impact.impactOccurred()
+        HStack(spacing: 12) {
+            // iOS Reminders-style checkbox - отдельная кнопка
+            Button(action: {
+                let impact = UIImpactFeedbackGenerator(style: .light)
+                impact.impactOccurred()
 
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                isCompleting = true
-            }
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isCompleting = true
+                }
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                onToggle()
-            }
-        }) {
-            HStack(spacing: 12) {
-                // iOS Reminders-style checkbox
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    onToggle()
+                }
+            }) {
                 ZStack {
                     Circle()
                         .strokeBorder(isCompleting ? Color.clear : Color(.systemGray3), lineWidth: 2)
@@ -158,42 +201,47 @@ struct AvailableTaskRow: View {
                             .foregroundStyle(.white)
                     }
                 }
+            }
+            .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.title)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                        .strikethrough(isCompleting, color: .secondary)
+            // Кликабельная карточка
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .strikethrough(isCompleting, color: .secondary)
 
-                    // Task description
-                    if !task.description.isEmpty {
-                        Text(task.description)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-
-                    // Goal badge - more subtle
-                    HStack(spacing: 4) {
-                        Image(systemName: "folder")
-                            .font(.caption2)
-                        Text(goal.title)
-                            .font(.caption)
-                    }
-                    .foregroundStyle(.secondary)
+                // Task description
+                if !task.description.isEmpty {
+                    Text(task.description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
 
-                Spacer()
+                // Goal badge - more subtle
+                HStack(spacing: 4) {
+                    Image(systemName: "folder")
+                        .font(.caption2)
+                    Text(goal.title)
+                        .font(.caption)
+                }
+                .foregroundStyle(.secondary)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
-            .opacity(isCompleting ? 0.5 : 1.0)
+            .onTapGesture {
+                onTap()
+            }
+
+            Spacer()
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
+        .opacity(isCompleting ? 0.5 : 1.0)
     }
 }
 
